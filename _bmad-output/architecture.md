@@ -638,6 +638,141 @@ fn getClipboardItems() { }  // 应该用 snake_case
 struct clipboardItem { }    // 应该用 PascalCase
 ```
 
+## Testing Architecture (Implemented 2025-12-25)
+
+### macOS Tauri 测试限制 (CRITICAL)
+
+> ⚠️ **关键约束**: macOS 的 WKWebView **不支持 WebDriver 协议**。`tauri-driver` 仅支持 Linux 和 Windows。
+
+**影响分析:**
+- 无法在 macOS 上进行真实的 Tauri E2E 测试（启动应用 + 自动化操作）
+- Playwright/WebDriver 无法直接控制 WKWebView
+- 这是 Apple 平台的固有限制，非 Tauri 框架问题
+
+### 测试策略决策
+
+| 属性 | 值 |
+|------|-----|
+| **决策** | 分层测试 + mockIPC 模拟 |
+| **测试金字塔** | 50% 单元 + 30% IPC 集成 + 20% 浏览器 E2E |
+| **核心依赖** | `@tauri-apps/api/mocks` 的 mockIPC 机制 |
+
+**Rationale:**
+- mockIPC 可覆盖 80%+ 的 Tauri IPC 交互测试
+- Playwright 测试浏览器 UI 层（不启动 Tauri 应用）
+- 手动验收测试补充 NSPanel 窗口行为和全局快捷键
+
+### 测试框架技术栈
+
+| 工具 | 版本 | 用途 |
+|------|------|------|
+| Vitest | 4.x | 单元/集成测试运行器 |
+| @testing-library/react | 16.x | React 组件测试 |
+| jsdom | 27.x | 浏览器环境模拟 |
+| Playwright | 1.57+ | E2E 浏览器测试 |
+| @faker-js/faker | 10.x | 测试数据生成 |
+
+### 测试目录结构
+
+```
+├── src/
+│   ├── test-utils/              # 测试工具
+│   │   ├── setup.ts             # Vitest 全局设置 (WebCrypto polyfill, Tauri mock)
+│   │   ├── render.tsx           # 自定义 render 函数
+│   │   ├── tauri-mocks.ts       # Tauri IPC Mock 工具
+│   │   └── index.ts             # 统一导出
+│   └── **/*.test.ts             # Co-located 单元测试
+│
+├── tests/
+│   ├── e2e/                     # Playwright E2E 测试
+│   │   └── example.spec.ts
+│   ├── integration/             # IPC 集成测试
+│   │   └── tauri-ipc.test.ts
+│   └── support/
+│       └── fixtures/
+│           └── factories/       # 数据工厂
+│               └── clipboard-factory.ts
+│
+├── vitest.config.ts             # Vitest 配置
+└── playwright.config.ts         # Playwright 配置
+```
+
+### Tauri IPC Mock 模式
+
+**核心工具:** `src/test-utils/tauri-mocks.ts`
+
+```typescript
+// 设置 Mock 响应
+mockIPCCommands({
+  get_clipboard_history: [{ id: 1, text_content: 'Hello' }],
+  delete_clipboard_item: { success: true },
+})
+
+// 验证调用
+const invoke = getInvokeMock()
+expect(invoke).toHaveBeenCalledWith('delete_clipboard_item', { id: 123 })
+```
+
+**关键实现细节:**
+- `setup.ts` 初始化 `__TAURI_INTERNALS__` 全局对象
+- 提供 WebCrypto polyfill（jsdom 缺失，但 Tauri IPC 需要）
+- `mockIPCCommands()` 支持静态返回值和函数动态响应
+
+### 数据工厂模式
+
+**工厂位置:** `tests/support/fixtures/factories/clipboard-factory.ts`
+
+```typescript
+// 创建测试数据
+const item = createClipboardItem({ content_type: 'text' })
+const items = createClipboardItems(10)
+
+// 支持属性覆盖
+const pinnedItem = createClipboardItem({ is_pinned: true })
+```
+
+### 测试命令
+
+| 命令 | 用途 |
+|------|------|
+| `npm run test:unit` | 运行 Vitest 单元/集成测试 |
+| `npm run test:unit:watch` | 监听模式 |
+| `npm run test:e2e` | 运行 Playwright E2E 测试 |
+| `npm run test:coverage` | 生成覆盖率报告 |
+| `npm test` | 运行所有测试 |
+
+### Playwright 配置要点
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  testDir: './tests/e2e',
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:1420',  // Tauri 默认端口
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },  // 接近 WKWebView
+  ],
+})
+```
+
+### AI Agent 测试指南
+
+**编写测试时必须:**
+1. 使用 `mockIPCCommands()` 模拟所有 Tauri 命令
+2. 使用数据工厂生成测试数据，不硬编码
+3. 单元测试与源文件 co-located
+4. E2E 测试使用 `data-testid` 选择元素
+
+**测试验证命令:**
+```bash
+npx tsc --noEmit          # 类型检查
+npm run test:unit         # 单元测试
+npm run test:e2e          # E2E 测试
+```
+
 ## Project Structure & Boundaries
 
 ### Requirements to Structure Mapping
@@ -908,7 +1043,9 @@ clipboardmanager/
 
 **Important Gaps (Non-blocking):**
 1. CI/CD 管道配置 - 建议 Phase 2 补充
-2. E2E 测试框架 - 建议使用 Playwright
+
+**Resolved Gaps (2025-12-25):**
+- ~~E2E 测试框架~~ → ✅ 已实现 Vitest + Playwright
 
 **Nice-to-Have:**
 - 代码签名配置文档
@@ -1043,4 +1180,9 @@ clipboardmanager/
 **Next Phase:** 使用本文档中记录的架构决策和模式开始实现
 
 **Document Maintenance:** 在实现过程中做出重大技术决策时更新此架构文档
+
+---
+
+**Document Updates:**
+- 2025-12-25: 添加 Testing Architecture 章节（测试框架搭建完成）
 

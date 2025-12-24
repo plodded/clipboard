@@ -8,8 +8,8 @@ user_skill_level: intermediate
 planning_artifacts: "{project-root}/_bmad-output/project-planning-artifacts"
 implementation_artifacts: "{project-root}/_bmad-output/implementation-artifacts"
 project_knowledge: "{project-root}/docs"
-tea_use_mcp_enhancements: false
-tea_use_playwright_utils: false
+tea_use_mcp_enhancements: true
+tea_use_playwright_utils: true
 
 # Core Configuration Values
 user_name: Boss

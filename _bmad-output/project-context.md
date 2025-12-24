@@ -112,6 +112,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - 单元测试与源文件 **co-located**（同目录）
 - E2E 测试放在 `tests/e2e/` 目录
 - 集成测试放在 `tests/integration/` 目录
+- 测试工具放在 `src/test-utils/` 目录
 - Rust 测试使用内联 `#[cfg(test)]` 模块
 
 #### Test File Naming
@@ -120,16 +121,35 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - E2E: `feature.spec.ts`
 - 集成: `feature.integration.test.ts`
 
-#### Test Framework (Planned)
-- 前端单元测试: Vitest（推荐）
-- E2E 测试: Playwright（推荐）
-- Rust 测试: 内置 `cargo test`
+#### Test Framework (Implemented)
+- **单元/集成测试**: Vitest + jsdom + @testing-library/react
+- **E2E 测试**: Playwright (Chromium + WebKit)
+- **Tauri IPC Mock**: `@/test-utils/tauri-mocks.ts`
+- **数据工厂**: `tests/support/fixtures/factories/`
+- **Rust 测试**: 内置 `cargo test`
+
+#### Test Commands
+```bash
+npm run test:unit      # 运行单元/集成测试
+npm run test:unit:watch # 监听模式
+npm run test:e2e       # 运行 E2E 测试
+npm run test:coverage  # 覆盖率报告
+npm test               # 运行所有测试
+```
+
+#### macOS Tauri 测试限制 (CRITICAL)
+> ⚠️ macOS 的 WKWebView **不支持 WebDriver**，无法进行真实 Tauri E2E 测试
+
+**替代策略**:
+- 使用 `mockIPC` 进行 IPC 集成测试（覆盖 Tauri 命令）
+- Playwright 测试浏览器 UI 层（不启动 Tauri 应用）
+- 手动验收测试：NSPanel 窗口行为、全局快捷键
 
 #### Testing Priorities
 - 优先测试业务逻辑（stores, utils, hooks）
 - 组件测试关注行为，不测试样式
 - IPC 通信需要集成测试覆盖
-- Mock Tauri API 进行前端隔离测试
+- 使用 `mockIPCCommands()` 模拟 Tauri API
 
 ### Code Quality & Style Rules
 
@@ -251,4 +271,4 @@ npm run tauri build
 
 ---
 
-_Last Updated: 2025-12-24_
+_Last Updated: 2025-12-25_

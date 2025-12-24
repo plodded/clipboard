@@ -1,0 +1,257 @@
+# MacPaste 测试指南
+
+## 概述
+
+MacPaste 使用分层测试策略，针对 Tauri 桌面应用的特殊性进行了优化：
+
+| 测试类型 | 工具 | 目录 | 用途 |
+|----------|------|------|------|
+| 单元测试 | Vitest | `src/**/*.test.ts` | 纯函数、工具方法 |
+| 集成测试 | Vitest + mockIPC | `tests/integration/` | Tauri IPC 通信 |
+| E2E 测试 | Playwright | `tests/e2e/` | 浏览器 UI 交互 |
+
+### macOS 测试限制
+
+> ⚠️ **重要**：由于 macOS 的 WKWebView 不支持 WebDriver，无法在 macOS 上进行真实的 Tauri E2E 测试。
+
+**替代策略**：
+- 使用 `@tauri-apps/api/mocks` 进行 IPC 集成测试（覆盖 80%+）
+- 使用 Playwright 测试浏览器 UI 层（不启动 Tauri）
+- 手动验收测试用于 NSPanel 窗口行为和全局快捷键
+
+---
+
+## 快速开始
+
+```bash
+# 安装依赖
+npm install
+
+# 运行所有单元/集成测试
+npm run test:unit
+
+# 运行 E2E 测试
+npm run test:e2e
+
+# 运行所有测试
+npm test
+
+# 查看覆盖率报告
+npm run test:coverage
+```
+
+---
+
+## 目录结构
+
+```
+├── src/
+│   ├── test-utils/           # 测试工具
+│   │   ├── setup.ts          # Vitest 全局设置
+│   │   ├── render.tsx        # 自定义 render 函数
+│   │   ├── tauri-mocks.ts    # Tauri IPC Mock 工具
+│   │   └── index.ts          # 统一导出
+│   └── **/*.test.ts          # Co-located 单元测试
+│
+├── tests/
+│   ├── e2e/                  # Playwright E2E 测试
+│   │   └── example.spec.ts
+│   ├── integration/          # IPC 集成测试
+│   │   └── tauri-ipc.test.ts
+│   └── support/              # 测试基础设施
+│       ├── fixtures/         # 测试夹具
+│       │   └── factories/    # 数据工厂
+│       └── helpers/          # 辅助函数
+│
+├── vitest.config.ts          # Vitest 配置
+├── playwright.config.ts      # Playwright 配置
+└── tests/README.md           # 本文档
+```
+
+---
+
+## 测试工具使用
+
+### 1. 单元测试 (Vitest)
+
+```typescript
+// src/components/Button.test.tsx
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@/test-utils'
+import { Button } from './Button'
+
+describe('Button', () => {
+  it('should render with label', () => {
+    render(<Button>Click me</Button>)
+    expect(screen.getByRole('button')).toHaveTextContent('Click me')
+  })
+})
+```
+
+### 2. Tauri IPC Mock
+
+```typescript
+// tests/integration/clipboard.test.ts
+import { mockIPCCommands, expectInvokedWith } from '@/test-utils'
+import { createClipboardItems } from '../support/fixtures/factories'
+
+describe('Clipboard Store', () => {
+  it('should fetch clipboard history', async () => {
+    // 设置 Mock
+    const items = createClipboardItems(3)
+    mockIPCCommands({
+      get_clipboard_history: items,
+    })
+
+    // 执行操作
+    const result = await yourService.getHistory()
+
+    // 断言
+    expect(result).toHaveLength(3)
+    expectInvokedWith('get_clipboard_history')
+  })
+})
+```
+
+### 3. 数据工厂
+
+```typescript
+import {
+  createClipboardItem,
+  createClipboardItems,
+  ClipboardFactory,
+} from '@/test-utils'
+
+// 创建单个条目
+const item = createClipboardItem({ content_type: 'text' })
+
+// 创建多个条目
+const items = createClipboardItems(10)
+
+// 使用工厂类（带自动清理）
+const factory = new ClipboardFactory()
+const item1 = factory.create({ is_pinned: true })
+const items = factory.createMany(5)
+// 测试结束后清理
+factory.cleanup()
+```
+
+### 4. E2E 测试 (Playwright)
+
+```typescript
+// tests/e2e/clipboard.spec.ts
+import { test, expect } from '@playwright/test'
+
+test('should display clipboard items', async ({ page }) => {
+  await page.goto('/')
+
+  // 验证 UI 元素
+  await expect(page.getByTestId('clipboard-list')).toBeVisible()
+})
+```
+
+---
+
+## 配置说明
+
+### Vitest 配置
+
+```typescript
+// vitest.config.ts
+export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test-utils/setup.ts'],
+    coverage: {
+      thresholds: {
+        lines: 70,
+        functions: 70,
+        branches: 60,
+      },
+    },
+  },
+})
+```
+
+### Playwright 配置
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  testDir: './tests/e2e',
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:1420',  // Tauri 默认端口
+  },
+  use: {
+    baseURL: 'http://localhost:1420',  // Tauri 默认端口
+    trace: 'retain-on-failure',
+  },
+})
+```
+
+---
+
+## 最佳实践
+
+### ✅ Do
+
+- 使用 `data-testid` 属性进行元素选择
+- 使用数据工厂生成测试数据
+- 每个测试后清理 Mock 状态
+- 使用 `mockIPCCommands` 而非直接操作 `__TAURI_INTERNALS__`
+- E2E 测试使用 `waitForResponse` 代替 `waitForTimeout`
+
+### ❌ Don't
+
+- 不要在测试中硬编码 ID 或时间戳
+- 不要使用 `setTimeout` 等待异步操作
+- 不要跳过错误处理测试
+- 不要在 E2E 测试中测试纯业务逻辑（应该用单元测试）
+
+---
+
+## CI/CD 集成
+
+### GitHub Actions 示例
+
+```yaml
+# .github/workflows/test.yml
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - run: npm run test:unit
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npm run test:e2e
+```
+
+---
+
+## 相关资源
+
+- [Tauri 测试文档](https://v2.tauri.app/develop/tests/)
+- [Tauri Mock API](https://v2.tauri.app/develop/tests/mocking/)
+- [Vitest 文档](https://vitest.dev/)
+- [Playwright 文档](https://playwright.dev/)
+- [Testing Library](https://testing-library.com/)
+
+---
+
+**Generated by**: BMad TEA Agent - Test Framework Setup
+**Date**: 2025-12-25

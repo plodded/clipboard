@@ -1,0 +1,288 @@
+# MacPaste CI/CD Pipeline
+# 自动化测试流水线：Lint → Unit Tests → E2E Tests → Burn-in
+#
+# 触发条件：
+# - Push 到 main/develop 分支
+# - 所有 Pull Request
+#
+# 文档：docs/ci.md
+
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+env:
+  NODE_VERSION_FILE: '.nvmrc'
+
+# 取消同一 PR 的重复运行
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================
+  # Job 1: 安装依赖 & 缓存
+  # ============================================
+  install:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: 'npm'
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Cache Playwright browsers
+        id: cache-playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium webkit
+
+  # ============================================
+  # Job 2: 代码质量检查 (TypeScript)
+  # ============================================
+  lint:
+    name: Lint & Type Check
+    needs: install
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: 'npm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+  # ============================================
+  # Job 3: 单元测试 (Vitest)
+  # ============================================
+  unit-tests:
+    name: Unit Tests
+    needs: install
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: 'npm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ============================================
+  # Job 4: E2E 测试 (Playwright - 并行分片)
+  # ============================================
+  e2e-tests:
+    name: E2E Tests (Shard ${{ matrix.shard }}/${{ matrix.total }})
+    needs: install
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false # 所有分片运行完毕，保留完整证据
+      matrix:
+        shard: [1, 2]
+        total: [2]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: 'npm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Restore Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers (if cache miss)
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Run E2E tests (shard ${{ matrix.shard }}/${{ matrix.total }})
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ matrix.total }}
+        env:
+          CI: true
+
+      - name: Upload test artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts-shard-${{ matrix.shard }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-shard-${{ matrix.shard }}
+          path: test-results/junit.xml
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ============================================
+  # Job 5: Burn-in 测试 (仅 PR 分支)
+  # ============================================
+  burn-in:
+    name: Burn-in (Flaky Detection)
+    needs: [e2e-tests]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 完整历史用于 git diff
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          cache: 'npm'
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Restore Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers (if cache miss)
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Detect changed test files
+        id: changed-tests
+        run: |
+          CHANGED_SPECS=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(spec|test)\.(ts|tsx)$' || echo "")
+          echo "specs=${CHANGED_SPECS}" >> $GITHUB_OUTPUT
+          if [ -n "$CHANGED_SPECS" ]; then
+            echo "Found changed test files:"
+            echo "$CHANGED_SPECS"
+          else
+            echo "No test files changed"
+          fi
+
+      - name: Run burn-in loop (5 iterations)
+        if: steps.changed-tests.outputs.specs != ''
+        run: |
+          echo "🔥 Running burn-in: 5 iterations on changed specs"
+          SPECS="${{ steps.changed-tests.outputs.specs }}"
+          for i in {1..5}; do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "🔄 Burn-in iteration $i/5"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            npm run test:e2e -- $SPECS || {
+              echo "❌ Burn-in failed on iteration $i"
+              exit 1
+            }
+          done
+          echo "✅ Burn-in passed: 5/5 iterations successful"
+
+      - name: Upload burn-in artifacts (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: burn-in-failure-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  # ============================================
+  # Job 6: 结果汇总
+  # ============================================
+  summary:
+    name: Test Summary
+    needs: [lint, unit-tests, e2e-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any job failed
+        if: |
+          needs.lint.result == 'failure' ||
+          needs.unit-tests.result == 'failure' ||
+          needs.e2e-tests.result == 'failure'
+        run: exit 1
