@@ -9,7 +9,8 @@ import { ClipboardList, SearchX } from 'lucide-react';
 
 function App() {
   // --- State ---
-  const [isOpen, setIsOpen] = useState(false); // Controls panel visibility
+  // In Tauri NSPanel mode, panel is always "open" - visibility controlled by Rust
+  const [isOpen, setIsOpen] = useState(true); // Always show panel content
   const [items, setItems] = useState<ClipboardItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<FilterCategory>(FilterCategory.All);
@@ -153,33 +154,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex flex-col items-center justify-center p-4">
-      {/* Background Simulation / Instructions */}
-      <div className="text-white text-center space-y-4 max-w-lg">
-        <h1 className="text-4xl font-bold drop-shadow-lg">MacPaste</h1>
-        <p className="text-white/80">
-          macOS 剪贴板管理器 - Tauri 2.x 原型
-        </p>
-        <div className="bg-white/10 p-6 rounded-2xl backdrop-blur-sm border border-white/20 shadow-xl">
-          <p className="mb-4">按 <kbd className="px-2 py-1 bg-black/30 rounded-md font-mono text-yellow-300">Cmd+Shift+V</kbd> 或点击下方按钮打开面板</p>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="px-6 py-3 bg-white text-indigo-600 font-bold rounded-full shadow-lg hover:scale-105 transition-transform active:scale-95"
-          >
-            {isOpen ? '关闭面板' : '打开剪贴板管理器'}
-          </button>
-        </div>
-      </div>
-
-      {/* --- Main Overlay Panel --- */}
-      <div
-        className={cn(
-          "fixed bottom-0 left-0 w-screen h-[340px] z-50 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-          isOpen ? "translate-y-0" : "translate-y-full"
-        )}
-      >
-        {/* Panel Container */}
-        <div className="relative w-full h-full bg-slate-900/85 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col">
+    // NSPanel mode: Panel fills the entire window (340px height set by Tauri)
+    <div className="w-screen h-screen overflow-hidden">
+      {/* Panel Container - fills entire NSPanel window */}
+      <div className="relative w-full h-full bg-slate-900/95 backdrop-blur-2xl flex flex-col">
 
           {/* Top Bar: Search, Filter & Status */}
           <div className="flex-none h-16 px-6 flex items-center justify-between border-b border-white/5 bg-black/10">
@@ -243,23 +221,21 @@ function App() {
               ))
             )}
           </div>
+
+          {/* Toast Notification - positioned within panel */}
+          <div
+            className={cn(
+              "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-3 bg-black/80 text-white rounded-lg backdrop-blur-md shadow-2xl transition-opacity duration-200 pointer-events-none z-[60]",
+              toastMessage ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-green-400">✓</span>
+              {toastMessage}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Toast Notification */}
-      <div
-        className={cn(
-          "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-6 py-3 bg-black/80 text-white rounded-lg backdrop-blur-md shadow-2xl transition-opacity duration-200 pointer-events-none z-[60]",
-          toastMessage ? "opacity-100 scale-100" : "opacity-0 scale-95"
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-green-400">✓</span>
-          {toastMessage}
-        </div>
-      </div>
-
-    </div>
   );
 };
 

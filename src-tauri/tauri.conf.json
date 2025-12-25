@@ -14,14 +14,16 @@
     "macOSPrivateApi": true,
     "windows": [
       {
+        "label": "main",
         "title": "MacPaste",
-        "width": 1200,
-        "height": 800,
-        "resizable": true,
+        "width": 800,
+        "height": 340,
+        "resizable": false,
         "fullscreen": false,
-        "transparent": false,
-        "decorations": true,
-        "center": true
+        "transparent": true,
+        "decorations": false,
+        "visible": false,
+        "alwaysOnTop": true
       }
     ],
     "security": {
