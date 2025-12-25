@@ -88,15 +88,17 @@ workflow_status:
         note: "Break down PRD into implementable epics and stories"
         completed_at: "2025-12-24"
       - id: "test-design"
-        status: "recommended"
+        status: "_bmad-output/test-design-system.md"
         agent: "tea"
         command: "/bmad:bmm:workflows:testarch-test-design"
         output: "System-level testability review"
+        completed_at: "2025-12-25"
       - id: "implementation-readiness"
-        status: "required"
+        status: "_bmad-output/project-planning-artifacts/implementation-readiness-report-2025-12-25.md"
         agent: "architect"
         command: "/bmad:bmm:workflows:check-implementation-readiness"
         note: "Validates PRD + Architecture + Epics + UX"
+        completed_at: "2025-12-25"
 
   # Phase 3 - Implementation
   phase_3:
@@ -111,14 +113,8 @@ workflow_status:
 
 # Next action
 next_workflow:
-  id: "implementation-readiness"
-  name: "Check Implementation Readiness"
-  agent: "architect"
-  command: "/bmad:bmm:workflows:check-implementation-readiness"
-  note: "Validates PRD + Architecture + Epics + UX alignment before development"
-  optional_available:
-    - id: "test-design"
-      name: "Test Design"
-      agent: "tea"
-      command: "/bmad:bmm:workflows:testarch-test-design"
-      note: "System-level testability review (recommended)"
+  id: "sprint-planning"
+  name: "Sprint Planning"
+  agent: "sm"
+  command: "/bmad:bmm:workflows:sprint-planning"
+  note: "Creates sprint plan with stories for Phase 4 implementation"
