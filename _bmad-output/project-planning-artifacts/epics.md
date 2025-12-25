@@ -80,7 +80,7 @@ This document provides the complete epic and story breakdown for MacPaste, decom
 | NFR2 | 响应性 | 面板呼出 < 200ms | NSPanel 预创建、状态缓存 |
 | NFR3 | 平台 | macOS 12+ 专属 | 可使用原生 API，无跨平台抽象层 |
 | NFR4 | 离线 | 完全本地运行 | SQLite 本地存储，无云依赖 |
-| NFR5 | 隐蔽性 | Dock 不显示图标 | LSUIElement 配置 |
+| NFR5 | 隐蔽性 | Dock 不显示图标 | setDockVisibility API (与系统托盘一起实施) |
 
 ### Additional Requirements
 
@@ -122,8 +122,8 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 - models/：clipboard_item.rs
 - services/：image_storage.rs
 
-**LSUIElement 配置：**
-- 在 tauri.conf.json 中配置 Info.plist，设置 Dock 不显示
+**Dock 隐藏配置：**
+- 使用 Tauri v2 内置 `setDockVisibility` API，与系统托盘 (Story 1.3) 一起实施
 
 ### Epic Strategy (User Specified)
 
@@ -152,8 +152,8 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 | FR13 | Epic 1 (UI) + Epic 2 (后端) | 收藏过滤 |
 | FR14 | Epic 1 (UI) + Epic 2 (后端) | 标记收藏 |
 | FR15 | Epic 1 (UI) + Epic 2 (后端) | 取消收藏 |
-| FR16 | Epic 1 | NSPanel 浮动面板 |
-| FR17 | Epic 1 | 面板不被 Dock 遮挡 |
+| FR16 | Epic 1 (Story 1.1) | NSPanel 浮动面板 |
+| FR17 | Epic 1 (Story 1.1) | 面板不被 Dock 遮挡 |
 | FR18 | Epic 1 | 快捷键切换面板 |
 | FR19 | Epic 1 | Esc 关闭面板 |
 | FR20 | Epic 1 | 选择后自动关闭 |
@@ -161,10 +161,10 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 | FR22 | Epic 1 | 方向键导航 |
 | FR23 | Epic 1 | 回车确认选择 |
 | FR24 | Epic 1 | 高亮当前选中项 |
-| FR25 | Epic 1 | 菜单栏托盘图标 |
-| FR26 | Epic 1 | 托盘菜单切换面板 |
-| FR27 | Epic 1 | 托盘菜单退出 |
-| FR28 | Epic 1 | Dock 不显示图标 |
+| FR25 | Epic 1 (Story 1.3) | 菜单栏托盘图标 |
+| FR26 | Epic 1 (Story 1.3) | 托盘菜单切换面板 |
+| FR27 | Epic 1 (Story 1.3) | 托盘菜单退出 |
+| FR28 | Epic 1 (Story 1.3) | Dock 不显示图标 (**setDockVisibility API**) |
 | FR29 | Epic 1 | 内容预览 |
 | FR30 | Epic 1 | 内容类型图标 |
 | FR31 | Epic 1 | 时间戳显示 |
@@ -181,7 +181,7 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 
 **技术要点:**
 - 安装 tauri-nspanel、global-shortcut、tray 插件
-- 配置 LSUIElement 隐藏 Dock
+- 使用 `setDockVisibility` API 隐藏 Dock（与系统托盘一起实施）
 - 迁移到 Zustand 状态管理
 - Mock 数据驱动 UI 展示
 
@@ -205,21 +205,22 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 
 ---
 
-### Story 1.1: NSPanel 浮动窗口与 Dock 隐藏
+### Story 1.1: NSPanel 浮动窗口
 
 **As a** MacPaste 用户,
 **I want** 应用以类 Spotlight 风格的无边框浮动面板显示,
 **So that** 我可以在不打断当前工作流的情况下快速访问剪贴板历史。
 
-**FRs covered:** FR16, FR17, FR28
+**FRs covered:** FR16, FR17
 
 **技术任务：**
 - 安装并配置 `tauri-nspanel` 插件
 - 安装并配置 `tauri-plugin-log` 日志系统
 - 配置 `tauri.conf.json` 窗口属性（decorations: false, transparent: true）
-- 配置 `Info.plist` 的 `LSUIElement = true` 隐藏 Dock 图标
 - 实现 NSPanel 窗口转换逻辑
 - 暴露窗口控制 API：`show_panel()`, `hide_panel()`, `toggle_panel()`（供 Story 1.2 和 1.3 调用）
+
+> **注意：** Dock 隐藏功能 (FR28) 已移至 Story 1.3，与系统托盘一起实施，使用 `setDockVisibility` API。
 
 **Acceptance Criteria:**
 
@@ -231,10 +232,6 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 **Given** 面板处于显示状态
 **When** 用户的 Dock 栏处于屏幕底部
 **Then** 面板不会被 Dock 栏遮挡，始终显示在 Dock 之上
-
-**Given** 应用正在运行
-**When** 用户查看 macOS Dock 栏
-**Then** 应用图标不显示在 Dock 中
 
 **Given** 面板处于显示状态
 **When** 用户点击面板外部区域
@@ -273,19 +270,23 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 
 ---
 
-### Story 1.3: 系统托盘与应用控制
+### Story 1.3: 系统托盘、Dock 隐藏与应用控制
 
 **As a** MacPaste 用户,
-**I want** 通过菜单栏托盘图标控制应用,
-**So that** 我可以方便地管理应用的显示状态和退出。
+**I want** 通过菜单栏托盘图标控制应用，且应用不在 Dock 中显示,
+**So that** 我可以方便地管理应用的显示状态，同时不占用 Dock 空间。
 
-**FRs covered:** FR25, FR26, FR27
+**FRs covered:** FR25, FR26, FR27, FR28
 
 **技术任务：**
 - 配置 Tauri 内置 `tray-icon` 功能
 - 创建托盘图标资源
 - 实现托盘菜单：显示/隐藏面板、退出应用（调用 Story 1.1 的窗口控制 API）
 - Rust 端处理菜单事件
+- 使用 `setDockVisibility(false)` API 隐藏 Dock 图标
+- 在应用启动时（setup hook）配置 Dock 隐藏
+
+> **技术方案变更 (2025-12-25):** 使用 Tauri v2 原生 `setDockVisibility` API 替代 LSUIElement (Info.plist 配置)。详见 Sprint 变更提案。
 
 **Acceptance Criteria:**
 
@@ -308,6 +309,15 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 **Given** 应用正在运行
 **When** 用户点击托盘菜单的"退出"
 **Then** 应用完全退出，托盘图标消失
+
+**Given** 应用已启动并配置了系统托盘
+**When** 用户查看 macOS Dock 栏
+**Then** 应用图标不显示在 Dock 中
+**And** 应用仅通过菜单栏托盘图标可见
+
+**Given** 应用使用 setDockVisibility API
+**When** 应用启动
+**Then** Dock 图标在应用初始化时即被隐藏
 
 ---
 

@@ -135,7 +135,7 @@ MacPaste 需要深度集成 macOS 系统功能：
 | **全局快捷键** | Tauri Global Shortcut API | 注册 `Cmd+Shift+V` 全局热键 |
 | **NSPanel 窗口** | macOS 原生 API / Tauri 插件 | 无边框面板，不被 Dock 遮挡 |
 | **系统托盘** | Tauri System Tray API | 菜单栏图标，显示/隐藏、退出 |
-| **Dock 隐藏** | LSUIElement = true | Info.plist 配置，Dock 不显示图标 |
+| **Dock 隐藏** | setDockVisibility API | Tauri v2 内置 API，动态控制 Dock 图标可见性 |
 
 ### Offline Capabilities
 

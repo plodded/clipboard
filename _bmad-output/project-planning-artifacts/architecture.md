@@ -47,7 +47,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 | 响应性 | 面板呼出 < 200ms | NSPanel 预创建、状态缓存 |
 | 平台 | macOS 12+ 专属 | 可使用原生 API，无跨平台抽象层 |
 | 离线 | 完全本地运行 | SQLite 本地存储，无云依赖 |
-| 隐蔽性 | Dock 不显示图标 | LSUIElement 配置 |
+| 隐蔽性 | Dock 不显示图标 | setDockVisibility API (与系统托盘一起实施) |
 
 **Scale & Complexity:**
 
@@ -194,14 +194,36 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 );
 ```
 
-#### 6. Dock Icon Hidden - LSUIElement (macOS Native)
+#### 6. Dock Icon Hidden - setDockVisibility API (Tauri v2 Native)
 
 | 属性 | 值 |
 |------|-----|
-| **类型** | 系统配置 |
+| **类型** | Tauri v2 内置 API |
 | **用途** | Dock 不显示应用图标 |
+| **实现时机** | 与系统托盘 (Story 1.3) 一起实施 |
 
-**Implementation:** 在 `tauri.conf.json` 中配置 Info.plist
+**Implementation:**
+
+**Rust 端 (推荐 - 在 setup hook 中):**
+```rust
+tauri::Builder::default()
+  .setup(move |app| {
+    #[cfg(target_os = "macos")]
+    app.handle().set_dock_visibility(false);
+    Ok(())
+  });
+```
+
+**或 TypeScript 端:**
+```typescript
+import { setDockVisibility } from '@tauri-apps/api/app';
+await setDockVisibility(false);
+```
+
+**Architectural Decision:**
+- 使用 `setDockVisibility` API 替代 LSUIElement (Info.plist 配置)
+- 优势：动态控制能力，可根据应用状态灵活切换
+- 与系统托盘一起实施，确保"后台运行"模式完整
 
 #### 7. Logging - tauri-plugin-log (Official)
 
@@ -219,14 +241,15 @@ npm add @tauri-apps/plugin-log
 
 ### Plugin Summary
 
-| 功能 | 插件 | 类型 | 自定义代码 |
-|------|------|------|-----------|
-| 全局快捷键 | tauri-plugin-global-shortcut | 官方 | 极少 |
-| 系统托盘 | Tauri built-in | 官方 | 少量 |
-| 浮动窗口 | tauri-nspanel | 社区 | 中等 |
-| 剪贴板 | tauri-plugin-clipboard-x | 社区 | 极少 |
-| 数据库 | tauri-plugin-sql | 官方 | 极少 |
-| 日志 | tauri-plugin-log | 官方 | 极少 |
+| 功能 | 插件/API | 类型 | 自定义代码 |
+|------|----------|------|-----------|
+| 全局快捷键 | tauri-plugin-global-shortcut | 官方插件 | 极少 |
+| 系统托盘 | Tauri built-in (tray-icon) | 官方内置 | 少量 |
+| 浮动窗口 | tauri-nspanel | 社区插件 | 中等 |
+| 剪贴板 | tauri-plugin-clipboard-x | 社区插件 | 极少 |
+| 数据库 | tauri-plugin-sql | 官方插件 | 极少 |
+| 日志 | tauri-plugin-log | 官方插件 | 极少 |
+| Dock 隐藏 | setDockVisibility API | 官方内置 | 极少 |
 
 **自定义 Tauri Commands 需求：** 仅需少量用于业务逻辑（如收藏切换、历史删除等）
 
@@ -1010,7 +1033,7 @@ clipboardmanager/
 - FR14-FR15 (收藏管理) → clipboardStore + storage commands
 - FR16-FR20 (窗口管理) → tauri-nspanel + window commands
 - FR21-FR24 (导航交互) → useKeyboard hook
-- FR25-FR28 (系统集成) → Tauri tray + LSUIElement
+- FR25-FR28 (系统集成) → Tauri tray + setDockVisibility API
 - FR29-FR33 (内容展示) → React components
 
 **Non-Functional Requirements Coverage:**
@@ -1018,7 +1041,7 @@ clipboardmanager/
 - 响应性：NSPanel 预创建，状态缓存
 - 平台限制：macOS 专属 API 直接使用
 - 离线运行：SQLite 本地存储，无网络依赖
-- 隐蔽性：LSUIElement 配置
+- 隐蔽性：setDockVisibility API (与系统托盘一起实施)
 
 ### Implementation Readiness Validation ✅
 

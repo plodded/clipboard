@@ -59,7 +59,7 @@
 | R-005 | TECH | 系统托盘菜单事件在 Tauri 中的处理一致性 | 2 | 2 | 4 | 验证托盘点击→菜单显示→命令执行完整链路 | QA |
 | R-006 | TECH | Zustand 状态迁移导致功能回归 | 2 | 2 | 4 | 迁移前建立完整的行为基准测试 | Dev |
 | R-007 | BUS | 搜索过滤功能在新架构下行为不一致 | 1 | 3 | 3 | 保持现有 UI 逻辑，仅迁移状态管理 | Dev |
-| R-008 | TECH | Dock 隐藏配置（LSUIElement）影响其他行为 | 1 | 2 | 2 | 验证托盘仍然可见，快捷键正常工作 | QA |
+| R-008 | TECH | Dock 隐藏配置（setDockVisibility API）影响其他行为 | 1 | 2 | 2 | 验证托盘仍然可见，快捷键正常工作 | QA |
 
 ### Low-Priority Risks (Score 1-2)
 
@@ -118,7 +118,7 @@
 | 1.6-E2E-002 | 类型过滤切换（FR12） | E2E | R-007 | 3 | QA | 全部/文本/图片/文件 |
 | 1.6-E2E-003 | 收藏过滤（FR13） | E2E | - | 1 | QA | 只显示收藏项 |
 | 1.6-E2E-004 | 收藏状态切换（FR14, FR15） | E2E | - | 2 | QA | 星号图标变化 |
-| 1.1-INT-001 | Dock 不显示图标（FR28） | Integration | R-008 | 1 | QA | LSUIElement 配置验证 |
+| 1.3-INT-001 | Dock 不显示图标（FR28） | Integration | R-008 | 1 | QA | setDockVisibility API 验证 |
 | 1.2-INT-001 | 快捷键 Toggle 行为（FR18） | Integration | R-003 | 2 | QA | 显示→隐藏→显示 |
 
 **Total P1**: 21 tests, 12 hours

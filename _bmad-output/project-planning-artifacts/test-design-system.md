@@ -89,7 +89,7 @@ MacPaste 是一款 macOS 剪贴板管理器，基于 **Tauri 2.x + React 19 + Ru
 | ASR-2 | PERF | 剪贴板监听低延迟 | 2 | 2 | 4 | 需要模拟高频复制场景，验证事件处理效率 |
 | ASR-3 | TECH | macOS 12+ 兼容性 | 1 | 3 | 3 | 需要多版本 macOS 测试环境 |
 | ASR-4 | OPS | 完全离线运行 | 1 | 2 | 2 | 验证无网络时所有功能正常 |
-| ASR-5 | TECH | Dock 不显示图标 | 1 | 1 | 1 | LSUIElement 配置验证 |
+| ASR-5 | TECH | Dock 不显示图标 | 1 | 1 | 1 | setDockVisibility API 验证 |
 
 ### 高风险 ASRs (Score ≥ 6)
 
