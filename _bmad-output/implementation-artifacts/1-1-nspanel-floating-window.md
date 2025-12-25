@@ -1,6 +1,6 @@
 # Story 1.1: NSPanel 浮动窗口
 
-Status: in-progress
+Status: done
 
 <!-- Generated: 2025-12-25 by SM Agent (Bob) -->
 <!-- INVEST Validated: Independent, Negotiable, Valuable, Estimable, Small, Testable -->
@@ -59,15 +59,16 @@ so that 我可以在不打断当前工作流的情况下快速访问剪贴板历
   {
     "label": "main",
     "title": "MacPaste",
+    "width": 800,
+    "height": 340,
     "decorations": false,
     "transparent": true,
     "visible": false,
     "resizable": false,
-    "alwaysOnTop": true,
-    "height": 340
+    "alwaysOnTop": true
   }
   ```
-  > **注意**: 宽度不在配置中固定，在 setup hook 中动态设置为屏幕宽度
+  > **注意**: `width: 800` 是初始值，实际宽度在 setup hook 中动态设置为屏幕宽度；`height: 340` 需与 `window.rs` 中的 `PANEL_HEIGHT` 常量保持同步
 
 ### Task 4: 实现 NSPanel 窗口转换逻辑 (AC: #1, #2)
 
@@ -149,12 +150,22 @@ so that 我可以在不打断当前工作流的情况下快速访问剪贴板历
   ])
   ```
 
-### Review Follow-ups (AI)
+### Review Follow-ups (AI) - Round 1 ✅
 
 - [x] [AI-Review][HIGH] React `isOpen` 状态未同步: 已删除冗余 `isOpen` 状态，改用 `invoke('hide_panel')` (YAGNI)
 - [x] [AI-Review][MEDIUM] 代码重复: `lib.rs` 已复用 `position_panel_on_monitor` 函数 (DRY)
 - [x] [AI-Review][MEDIUM] 误导性的快捷键: 已删除，全局快捷键将在 Story 1.2 实现 (YAGNI)
 - [x] [AI-Review][LOW] 未使用的依赖: 保留 `tauri-plugin-shell`，已配置权限供后续使用
+
+### Review Follow-ups (AI) - Round 2 ✅
+
+- [x] [AI-Review][MEDIUM] 错误处理不完整: 保留现状，YAGNI - `set_size/set_position` 失败概率极低，过度防御
+- [x] [AI-Review][MEDIUM] File List 不完整: 已补充 `package.json` 到 File List
+- [x] [AI-Review][MEDIUM] CSP 被禁用: 已在 Dev Notes 添加「临时配置说明」
+- [x] [AI-Review][LOW] 常量重复: 已在 `window.rs` 添加「需与 tauri.conf.json 同步」注释（跨语言无法消除）
+- [x] [AI-Review][LOW] 缺少注释: 已在 `SearchBar.tsx` 添加 50ms 延迟原因注释
+- [x] [AI-Review][LOW] 缺少文档: 保留现状，YAGNI - `run()` 是标准入口，语义自明
+- [x] [AI-Review][LOW] 文档不一致: 已更新 Task 3.1，说明 `width: 800` 是初始值
 
 ### Task 6: 验证与测试 (AC: #1, #2, #3)
 
@@ -177,6 +188,10 @@ so that 我可以在不打断当前工作流的情况下快速访问剪贴板历
 2. **必须使用预创建策略**：在 setup() 中创建 panel，只切换可见性
 3. **Dock 隐藏已移至 Story 1.3**：本 Story 不实现 Dock 隐藏
 4. **窗口控制 API 供后续 Story 调用**：Story 1.2 (快捷键) 和 Story 1.3 (托盘) 都会调用
+
+### 临时配置说明
+
+- **CSP 禁用 (`csp: null`)**：Epic 1 为 Demo 版本，开发阶段暂时禁用 Content Security Policy。生产环境部署前需配置适当的 CSP 规则（计划在 Epic 2 或发布前处理）。
 
 ### 关键技术要点 (来自 Spike 验证)
 
@@ -311,4 +326,5 @@ Claude Opus 4.5 (claude-opus-4-5-20251101) via Claude Code CLI
 | `src-tauri/src/lib.rs` | 修改 | setup hook + NSPanel 初始化 + Dock 点击事件 + DRY 重构 |
 | `src/App.tsx` | 修改 | 删除冗余 isOpen 状态，改用 invoke('hide_panel') |
 | `src/components/SearchBar.tsx` | 修改 | 简化 focus 逻辑，移除 isVisible prop |
+| `package.json` | 修改 | 添加 @tauri-apps/plugin-log 前端依赖 |
 

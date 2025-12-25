@@ -6,7 +6,9 @@ use log::info;
 use tauri::Manager;
 use tauri_nspanel::ManagerExt;
 
-pub const PANEL_HEIGHT: f64 = 340.0; // 逻辑像素
+/// 面板高度（逻辑像素）
+/// 注意：此值需与 tauri.conf.json 中的 windows[0].height 保持同步
+pub const PANEL_HEIGHT: f64 = 340.0;
 
 /// 将面板定位到指定显示器的底部
 pub fn position_panel_on_monitor(

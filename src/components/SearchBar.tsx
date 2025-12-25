@@ -10,6 +10,7 @@ function SearchBar({ query, setQuery }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // NSPanel 模式：面板显示时自动 focus 搜索框
+  // 延迟 50ms 等待 NSPanel 显示动画完成，避免 focus 被动画打断
   useEffect(() => {
     const timer = setTimeout(() => {
       inputRef.current?.focus();
