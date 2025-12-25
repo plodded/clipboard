@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, type MouseEvent } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { ClipboardItem, ClipboardType, FilterCategory } from './types';
 import { INITIAL_MOCK_DATA, STORAGE_KEY } from './constants';
 import ClipboardCard from './components/ClipboardCard';
@@ -9,8 +10,7 @@ import { ClipboardList, SearchX } from 'lucide-react';
 
 function App() {
   // --- State ---
-  // In Tauri NSPanel mode, panel is always "open" - visibility controlled by Rust
-  const [isOpen, setIsOpen] = useState(true); // Always show panel content
+  // NSPanel 模式：窗口可见性由 Rust 层控制，前端无需维护 isOpen 状态
   const [items, setItems] = useState<ClipboardItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<FilterCategory>(FilterCategory.All);
@@ -95,7 +95,7 @@ function App() {
 
     setToastMessage("已复制到剪贴板");
     setTimeout(() => {
-      setIsOpen(false);
+      invoke('hide_panel').catch(console.error);
       setToastMessage(null);
     }, 800);
   }, [items]);
@@ -108,21 +108,13 @@ function App() {
   };
 
   // --- Keyboard Navigation ---
+  // 注意：全局快捷键 (Cmd+Shift+V) 将在 Story 1.2 中由 Rust 层实现
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Global toggle (simulated with Shift+Cmd+V)
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyV') {
-        e.preventDefault();
-        setIsOpen(prev => !prev);
-        return;
-      }
-
-      if (!isOpen) return;
-
       switch (e.key) {
         case 'Escape':
           e.preventDefault();
-          setIsOpen(false);
+          invoke('hide_panel').catch(console.error);
           break;
         case 'ArrowRight':
           e.preventDefault();
@@ -143,7 +135,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, filteredItems, selectedIndex, handleCopy]);
+  }, [filteredItems, selectedIndex, handleCopy]);
 
 
   // --- Render Helpers ---
@@ -163,7 +155,7 @@ function App() {
           <div className="flex-none h-16 px-6 flex items-center justify-between border-b border-white/5 bg-black/10">
             <div className="flex items-center gap-4">
               <span className="text-xs font-bold tracking-widest text-gray-500 uppercase hidden sm:block">Clipboard History</span>
-              <SearchBar query={searchQuery} setQuery={setSearchQuery} isVisible={isOpen} />
+              <SearchBar query={searchQuery} setQuery={setSearchQuery} />
               <FilterBar
                 currentFilter={filterCategory}
                 onSelect={setFilterCategory}

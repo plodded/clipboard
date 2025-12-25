@@ -1,6 +1,6 @@
 # Story 1.1: NSPanel 浮动窗口
 
-Status: in-review
+Status: in-progress
 
 <!-- Generated: 2025-12-25 by SM Agent (Bob) -->
 <!-- INVEST Validated: Independent, Negotiable, Valuable, Estimable, Small, Testable -->
@@ -148,6 +148,13 @@ so that 我可以在不打断当前工作流的情况下快速访问剪贴板历
       commands::window::toggle_panel,
   ])
   ```
+
+### Review Follow-ups (AI)
+
+- [x] [AI-Review][HIGH] React `isOpen` 状态未同步: 已删除冗余 `isOpen` 状态，改用 `invoke('hide_panel')` (YAGNI)
+- [x] [AI-Review][MEDIUM] 代码重复: `lib.rs` 已复用 `position_panel_on_monitor` 函数 (DRY)
+- [x] [AI-Review][MEDIUM] 误导性的快捷键: 已删除，全局快捷键将在 Story 1.2 实现 (YAGNI)
+- [x] [AI-Review][LOW] 未使用的依赖: 保留 `tauri-plugin-shell`，已配置权限供后续使用
 
 ### Task 6: 验证与测试 (AC: #1, #2, #3)
 
@@ -301,6 +308,7 @@ Claude Opus 4.5 (claude-opus-4-5-20251101) via Claude Code CLI
 | `src-tauri/tauri.conf.json` | 修改 | 更新窗口配置为 NSPanel 规格 |
 | `src-tauri/src/commands/mod.rs` | 新建 | 命令模块导出 |
 | `src-tauri/src/commands/window.rs` | 新建 | show/hide/toggle 命令 + 多显示器定位逻辑 |
-| `src-tauri/src/lib.rs` | 修改 | setup hook + NSPanel 初始化 + Dock 点击事件 |
-| `src/App.tsx` | 修改 | 移除占位背景，直接显示剪贴板面板 |
+| `src-tauri/src/lib.rs` | 修改 | setup hook + NSPanel 初始化 + Dock 点击事件 + DRY 重构 |
+| `src/App.tsx` | 修改 | 删除冗余 isOpen 状态，改用 invoke('hide_panel') |
+| `src/components/SearchBar.tsx` | 修改 | 简化 focus 逻辑，移除 isVisible prop |
 

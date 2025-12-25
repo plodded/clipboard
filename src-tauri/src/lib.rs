@@ -15,7 +15,6 @@ use tauri_plugin_log::{Target, TargetKind};
 ///
 /// # 关键技术点
 /// - 窗口级别 25 (NSMainMenuWindowLevel + 1) 确保在 Dock 之上
-/// - Tauri 使用左上角原点坐标系
 /// - 错误使用 Debug 格式化，因为 tauri_nspanel::Error 没有 Display trait
 fn init_panel(app: &tauri::AppHandle) -> Result<(), String> {
     info!("Initializing NSPanel...");
@@ -37,38 +36,9 @@ fn init_panel(app: &tauri::AppHandle) -> Result<(), String> {
     panel.set_hides_on_deactivate(true);
     info!("Panel configured to hide on deactivate (click outside)");
 
-    // 获取当前显示器信息并设置全屏宽度和底部定位
+    // 复用 window.rs 中的定位逻辑 (DRY)
     if let Some(monitor) = window.current_monitor().ok().flatten() {
-        let screen_size = monitor.size();
-        let screen_position = monitor.position();
-        let scale_factor = monitor.scale_factor();
-        let panel_height = 340.0; // 逻辑像素
-
-        // 计算逻辑像素尺寸（考虑 Retina 缩放）
-        let logical_screen_width = screen_size.width as f64 / scale_factor;
-        let logical_screen_height = screen_size.height as f64 / scale_factor;
-
-        // 设置全屏宽度（使用逻辑像素）
-        let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize {
-            width: logical_screen_width,
-            height: panel_height,
-        }));
-        info!(
-            "Panel size set to {}x{} logical pixels (scale_factor: {})",
-            logical_screen_width, panel_height, scale_factor
-        );
-
-        // 定位到屏幕底部（使用逻辑像素）
-        // Tauri 使用左上角原点坐标系
-        // y = screen_y + screen_height - panel_height 使面板底边与屏幕底边对齐
-        let logical_x = screen_position.x as f64 / scale_factor;
-        let logical_y = screen_position.y as f64 / scale_factor + logical_screen_height - panel_height;
-
-        let _ = window.set_position(tauri::Position::Logical(tauri::LogicalPosition {
-            x: logical_x,
-            y: logical_y,
-        }));
-        info!("Panel positioned at ({}, {}) logical pixels", logical_x, logical_y);
+        commands::position_panel_on_monitor(&window, &monitor)?;
     } else {
         info!("Could not get monitor info, using default position");
     }

@@ -4,23 +4,18 @@ import { Search } from 'lucide-react';
 interface SearchBarProps {
   query: string;
   setQuery: (q: string) => void;
-  isVisible: boolean;
 }
 
-function SearchBar({ query, setQuery, isVisible }: SearchBarProps) {
+function SearchBar({ query, setQuery }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // NSPanel 模式：面板显示时自动 focus 搜索框
   useEffect(() => {
-    if (isVisible) {
-      // Small delay to ensure panel is mounted/transitioning
-      const timer = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
-      return () => clearTimeout(timer);
-    } else {
-      inputRef.current?.blur();
-    }
-  }, [isVisible]);
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="relative w-64 group">
