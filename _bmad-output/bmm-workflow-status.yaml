@@ -57,7 +57,7 @@ workflow_status:
     required: true
     workflows:
       - id: "prd"
-        status: "_bmad-output/prd.md"
+        status: "_bmad-output/project-planning-artifacts/prd.md"
         agent: "pm"
         command: "/bmad:bmm:workflows:create-prd"
         output: "PRD focused on new features/changes"
@@ -75,7 +75,7 @@ workflow_status:
     required: true
     workflows:
       - id: "create-architecture"
-        status: "_bmad-output/architecture.md"
+        status: "_bmad-output/project-planning-artifacts/architecture.md"
         agent: "architect"
         command: "/bmad:bmm:workflows:create-architecture"
         output: "Integration architecture - solution design for THIS project"
@@ -88,7 +88,7 @@ workflow_status:
         note: "Break down PRD into implementable epics and stories"
         completed_at: "2025-12-24"
       - id: "test-design"
-        status: "_bmad-output/test-design-system.md"
+        status: "_bmad-output/project-planning-artifacts/test-design-system.md"
         agent: "tea"
         command: "/bmad:bmm:workflows:testarch-test-design"
         output: "System-level testability review"
@@ -106,15 +106,16 @@ workflow_status:
     required: true
     workflows:
       - id: "sprint-planning"
-        status: "required"
+        status: "_bmad-output/implementation-artifacts/sprint-status.yaml"
         agent: "sm"
         command: "/bmad:bmm:workflows:sprint-planning"
         note: "Creates sprint plan with stories"
+        completed_at: "2025-12-25"
 
 # Next action
 next_workflow:
-  id: "sprint-planning"
-  name: "Sprint Planning"
-  agent: "sm"
-  command: "/bmad:bmm:workflows:sprint-planning"
-  note: "Creates sprint plan with stories for Phase 4 implementation"
+  id: "dev-story"
+  name: "Story Development"
+  agent: "dev"
+  command: "/bmad:bmm:workflows:dev-story"
+  note: "Execute stories from sprint backlog"
