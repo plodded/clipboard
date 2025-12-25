@@ -265,15 +265,21 @@
 3. 编写集成测试验证窗口行为
 
 **Spike 验收标准：**
-- [ ] 成功集成 `tauri-nspanel` 插件到项目
-- [ ] 显示无边框浮动窗口（decorations: false）
-- [ ] 验证面板不被 Dock 遮挡
-- [ ] 基础 show/hide API 可用
+- [x] 成功集成 `tauri-nspanel` 插件到项目
+- [x] 显示无边框浮动窗口（decorations: false）
+- [x] 验证面板不被 Dock 遮挡
+- [x] 基础 show/hide API 可用
 
 **Owner:** Dev Team
 **Timeline:** Sprint 0 - Story 1.1 开始前
-**Status:** ✅ Approved (2025-12-25 团队评审)
+**Status:** ✅ PASSED (2025-12-25)
 **Verification:** 成功显示无边框浮动窗口，不被 Dock 遮挡
+
+**Spike 实现笔记：**
+- 使用 `tauri-nspanel` v2 分支 (git: ahkohd/tauri-nspanel)
+- 通过 `WebviewWindowBuilder` 创建窗口后调用 `to_panel()` 转换
+- 窗口级别设置为 25 确保在 Dock 之上
+- 面板定位：屏幕底部居中，尺寸 800x340
 
 ### R-002: 面板呼出响应时间超过 200ms (Score: 6)
 
