@@ -223,16 +223,17 @@ jobs:
       - name: Install Playwright browsers (if cache miss)
         run: npx playwright install --with-deps chromium webkit
 
-      - name: Detect changed test files
+      - name: Detect changed E2E test files
         id: changed-tests
         run: |
-          CHANGED_SPECS=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(spec|test)\.(ts|tsx)$' || echo "")
+          # 只匹配 .spec.ts/.spec.tsx (E2E 测试)，排除 .test.ts (单元测试)
+          CHANGED_SPECS=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.spec\.(ts|tsx)$' || echo "")
           echo "specs=${CHANGED_SPECS}" >> $GITHUB_OUTPUT
           if [ -n "$CHANGED_SPECS" ]; then
-            echo "Found changed test files:"
+            echo "Found changed E2E test files:"
             echo "$CHANGED_SPECS"
           else
-            echo "No test files changed"
+            echo "No E2E test files changed - skipping burn-in"
           fi
 
       - name: Run burn-in loop (5 iterations)
