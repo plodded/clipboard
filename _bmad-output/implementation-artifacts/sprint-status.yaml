@@ -47,7 +47,7 @@ development_status:
   1-1-nspanel-floating-window: done          # 2025-12-26 completed
   1-2-global-shortcut-panel-toggle: done     # 2025-12-26 completed
   1-3-system-tray-dock-hiding: done          # 2025-12-26 completed
-  1-4-zustand-state-management-migration: backlog
+  1-4-zustand-state-management-migration: done  # 2025-12-26 completed
   1-5-keyboard-navigation-and-window-integration: backlog
   1-6-search-filter-and-favorites-validation: backlog
   epic-1-retrospective: optional

@@ -1,14 +1,17 @@
 import { FilterCategory } from '../types';
+import { useClipboardStore } from '../stores/clipboardStore';
 import { cn } from '../utils';
 import { Grid, FileText, Image as ImageIcon, Paperclip, Star } from 'lucide-react';
 
 interface FilterBarProps {
-  currentFilter: FilterCategory;
-  onSelect: (filter: FilterCategory) => void;
   resultCount: number;
 }
 
-function FilterBar({ currentFilter, onSelect, resultCount }: FilterBarProps) {
+function FilterBar({ resultCount }: FilterBarProps) {
+  // Get state and action directly from store
+  const currentFilter = useClipboardStore((state) => state.filterCategory);
+  const onSelect = useClipboardStore((state) => state.setFilterCategory);
+
   const filters = [
     { key: FilterCategory.All, label: '全部', icon: Grid },
     { key: FilterCategory.Text, label: '文本', icon: FileText },
@@ -46,6 +49,6 @@ function FilterBar({ currentFilter, onSelect, resultCount }: FilterBarProps) {
       </span>
     </div>
   );
-};
+}
 
 export default FilterBar;

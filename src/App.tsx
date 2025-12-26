@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo, useRef, useCallback, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useCallback, type MouseEvent } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ClipboardItem, ClipboardType, FilterCategory } from './types';
-import { INITIAL_MOCK_DATA, STORAGE_KEY } from './constants';
+import { ClipboardType, FilterCategory } from './types';
+import { useClipboardStore } from './stores/clipboardStore';
 import ClipboardCard from './components/ClipboardCard';
 import FilterBar from './components/FilterBar';
 import SearchBar from './components/SearchBar';
@@ -9,32 +9,25 @@ import { cn } from './utils';
 import { ClipboardList, SearchX } from 'lucide-react';
 
 function App() {
-  // --- State ---
-  const [items, setItems] = useState<ClipboardItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState<FilterCategory>(FilterCategory.All);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // --- State from Zustand Store ---
+  const items = useClipboardStore((state) => state.items);
+  const searchQuery = useClipboardStore((state) => state.searchQuery);
+  const filterCategory = useClipboardStore((state) => state.filterCategory);
+  const selectedIndex = useClipboardStore((state) => state.selectedIndex);
+  const toastMessage = useClipboardStore((state) => state.toastMessage);
 
+  // --- Actions from Store ---
+  const setItems = useClipboardStore((state) => state.setItems);
+  const setSearchQuery = useClipboardStore((state) => state.setSearchQuery);
+  const setFilterCategory = useClipboardStore((state) => state.setFilterCategory);
+  const setSelectedIndex = useClipboardStore((state) => state.setSelectedIndex);
+  const showToast = useClipboardStore((state) => state.showToast);
+  const hideToast = useClipboardStore((state) => state.hideToast);
+  const toggleStarAction = useClipboardStore((state) => state.toggleStar);
+
+  // --- Refs (not migrated to store - DOM references) ---
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // --- Initialization & Persistence ---
-  useEffect(() => {
-    // Load from LocalStorage or seed with Mock data
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse history", e);
-        setItems(INITIAL_MOCK_DATA);
-      }
-    } else {
-      setItems(INITIAL_MOCK_DATA);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_MOCK_DATA));
-    }
-  }, []);
 
   // --- Auto-hide on blur (click outside panel) ---
   useEffect(() => {
@@ -47,12 +40,10 @@ function App() {
     return () => window.removeEventListener('blur', handleBlur);
   }, []);
 
-  // Save changes to storage
-  useEffect(() => {
-    if (items.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    }
-  }, [items]);
+  // NOTE: localStorage initialization and saving are now handled by Zustand persist middleware
+  // The following useEffect hooks have been removed:
+  // - Load from localStorage (lines 23-37 in original)
+  // - Save to localStorage (lines 51-55 in original)
 
   // --- Filtering Logic ---
   const filteredItems = useMemo(() => {
@@ -76,10 +67,9 @@ function App() {
     });
   }, [items, filterCategory, searchQuery]);
 
-  // Reset selection when filter changes
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [filteredItems.length, filterCategory, searchQuery]);
+  // NOTE: "Reset selection when filter changes" useEffect has been removed
+  // This logic is now handled inside store actions: setSearchQuery and setFilterCategory
+  // Both actions automatically reset selectedIndex to 0
 
   // Scroll to active item
   useEffect(() => {
@@ -94,28 +84,26 @@ function App() {
 
   // --- Actions ---
 
-  const handleCopy = useCallback((item: ClipboardItem) => {
-    // In a real Tauri app, this would call the backend to write to clipboard
+  const handleCopy = useCallback((item: typeof items[0]) => {
+    // TODO: [Epic-2] Replace with invoke('write_clipboard', { content: item.content })
     console.log(`[Mock] Copied to clipboard: ${item.content}`);
 
-    // Simulate updating timestamp and moving to front
+    // TODO: [Epic-2] Replace with real clipboard event handling - this mock logic will be removed
     const updatedItems = items.filter(i => i.id !== item.id);
     const updatedItem = { ...item, timestamp: Date.now() };
     setItems([updatedItem, ...updatedItems]);
 
-    setToastMessage("已复制到剪贴板");
+    showToast("已复制到剪贴板");
     setTimeout(() => {
       // Hide panel after copy
       invoke('hide_panel').catch(console.error);
-      setToastMessage(null);
+      hideToast();
     }, 800);
-  }, [items]);
+  }, [items, setItems, showToast, hideToast]);
 
   const toggleStar = (e: MouseEvent, id: string) => {
     e.stopPropagation();
-    setItems(prev => prev.map(item =>
-      item.id === id ? { ...item, isStarred: !item.isStarred } : item
-    ));
+    toggleStarAction(id);
   };
 
   // --- Keyboard Navigation ---
@@ -130,11 +118,11 @@ function App() {
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setSelectedIndex(prev => Math.min(prev + 1, filteredItems.length - 1));
+          setSelectedIndex(Math.min(selectedIndex + 1, filteredItems.length - 1));
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          setSelectedIndex(prev => Math.max(prev - 1, 0));
+          setSelectedIndex(Math.max(selectedIndex - 1, 0));
           break;
         case 'Enter':
           e.preventDefault();
@@ -147,7 +135,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredItems, selectedIndex, handleCopy]);
+  }, [filteredItems, selectedIndex, handleCopy, setSelectedIndex]);
 
 
   // --- Render Helpers ---
@@ -166,12 +154,8 @@ function App() {
       <div className="flex-none h-16 px-6 flex items-center justify-between border-b border-white/5 bg-black/10">
         <div className="flex items-center gap-4">
           <span className="text-xs font-bold tracking-widest text-gray-500 uppercase hidden sm:block">Clipboard History</span>
-          <SearchBar query={searchQuery} setQuery={setSearchQuery} isVisible={true} />
-          <FilterBar
-            currentFilter={filterCategory}
-            onSelect={setFilterCategory}
-            resultCount={filteredItems.length}
-          />
+          <SearchBar isVisible={true} />
+          <FilterBar resultCount={filteredItems.length} />
         </div>
 
         <div className="text-xs text-gray-400 flex items-center gap-4">
