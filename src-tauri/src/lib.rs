@@ -37,6 +37,8 @@ pub fn run() {
                             if let Err(e) = panel::toggle_panel(app_handle) {
                                 log::error!("Failed to toggle panel: {}", e);
                             }
+                        } else {
+                            log::error!("Global shortcut triggered but APP_HANDLE not initialized");
                         }
                     }
                 })
