@@ -1,6 +1,6 @@
 # Story 1.4: Zustand 状态管理迁移
 
-Status: review
+Status: done
 
 ---
 
@@ -59,6 +59,12 @@ Status: review
   - [x] 5.3 收藏功能：点击星号，状态切换并持久化
   - [x] 5.4 键盘导航：方向键移动，回车复制，Esc 关闭
   - [x] 5.5 Toast 显示：复制后显示提示
+
+- [x] Task 6: Review Follow-ups (AI)
+  - [x] [AI-Review][Medium] src/stores/clipboardStore.ts - Fix duplicate FilterCategory import (type vs value) ✅ Fixed
+  - [~] [AI-Review][High] App.tsx:92-94 - promoteItem action → **YAGNI rejected** (Epic 2 will replace Mock logic)
+  - [~] [AI-Review][Medium] Magic number timeouts → **YAGNI rejected** (single-use values, no DRY violation)
+  - [~] [AI-Review][Low] console.log → **YAGNI rejected** (Mock code will be removed in Epic 2)
 
 ---
 
@@ -357,3 +363,13 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
   - 迁移 App.tsx 状态到 store
   - 更新 SearchBar 和 FilterBar 组件
   - 添加 12 个单元测试，全部通过
+- 2025-12-26: Code Review Follow-ups 处理完成
+  - Fixed: FilterCategory 重复导入问题
+  - YAGNI Rejected: promoteItem action (Epic 2 会替换)
+  - YAGNI Rejected: Magic number constants (单次使用)
+  - YAGNI Rejected: Logger (Mock 代码会被移除)
+- 2025-12-26: 第二轮 Code Review 处理完成
+  - Added: TODO 注释标记 Mock 代码 (App.tsx:88, 91)
+  - YAGNI Rejected: useShallow 优化 (过早优化)
+  - YAGNI Rejected: persist 测试 (测试第三方库内部行为)
+  - Story 状态更新为 done

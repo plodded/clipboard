@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { INITIAL_MOCK_DATA, STORAGE_KEY } from '../constants';
-import type { ClipboardItem, FilterCategory } from '../types';
-import { FilterCategory as FC } from '../types';
+import { FilterCategory } from '../types';
+import type { ClipboardItem } from '../types';
 
 interface ClipboardStore {
   // State
@@ -32,7 +32,7 @@ export const useClipboardStore = create<ClipboardStore>()(
       items: INITIAL_MOCK_DATA,
       selectedIndex: 0,
       searchQuery: '',
-      filterCategory: FC.All,
+      filterCategory: FilterCategory.All,
       isLoading: false,
       toastMessage: null,
 

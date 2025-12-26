@@ -85,10 +85,10 @@ function App() {
   // --- Actions ---
 
   const handleCopy = useCallback((item: typeof items[0]) => {
-    // In a real Tauri app, this would call the backend to write to clipboard
+    // TODO: [Epic-2] Replace with invoke('write_clipboard', { content: item.content })
     console.log(`[Mock] Copied to clipboard: ${item.content}`);
 
-    // Simulate updating timestamp and moving to front
+    // TODO: [Epic-2] Replace with real clipboard event handling - this mock logic will be removed
     const updatedItems = items.filter(i => i.id !== item.id);
     const updatedItem = { ...item, timestamp: Date.now() };
     setItems([updatedItem, ...updatedItems]);
