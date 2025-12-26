@@ -40,6 +40,22 @@ function App() {
     return () => window.removeEventListener('blur', handleBlur);
   }, []);
 
+  // --- Auto-focus search on window focus ---
+  // 当窗口重新获得焦点时，确保搜索框聚焦
+  // 这解决了焦点在其他元素（如收藏按钮）上时，隐藏后重新显示面板无法使用键盘的问题
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      const searchInput = document.querySelector('input[placeholder*="搜索"]') as HTMLInputElement;
+      if (searchInput) {
+        // 小延迟确保 DOM 和窗口焦点状态就绪
+        setTimeout(() => searchInput.focus(), 50);
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, []);
+
   // NOTE: localStorage initialization and saving are now handled by Zustand persist middleware
   // The following useEffect hooks have been removed:
   // - Load from localStorage (lines 23-37 in original)

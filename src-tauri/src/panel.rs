@@ -82,9 +82,16 @@ pub fn show_panel(app: &AppHandle) -> Result<(), String> {
         }
     }
 
-    panel.show();
+    // 使用 make_key_and_order_front 替代 show，确保 panel 成为 key window
+    // 这解决了焦点不在搜索框时，隐藏后重新显示面板无法接收键盘事件的问题
+    panel.make_key_and_order_front(None);
 
-    log::debug!("Panel shown");
+    // 额外确保 webview 获得焦点
+    if let Some(window) = app.get_webview_window(PANEL_LABEL) {
+        let _ = window.set_focus();
+    }
+
+    log::debug!("Panel shown and made key window");
     Ok(())
 }
 

@@ -15,15 +15,16 @@ user_name: 'Boss'
 date: '2025-12-24'
 implementation_progress:
   epic-1:
-    status: 'in-progress'
+    status: 'complete'
+    completed_at: '2025-12-26'
     stories_completed:
       - '1.1: NSPanel 浮动窗口 (2025-12-26)'
       - '1.2: 全局快捷键 (2025-12-26)'
       - '1.3: 系统托盘与 Dock 隐藏 (2025-12-26)'
-    stories_remaining:
-      - '1.4: Zustand 状态管理迁移'
-      - '1.5: 键盘导航与窗口交互集成'
-      - '1.6: 搜索过滤与收藏功能验证'
+      - '1.4: Zustand 状态管理迁移 (2025-12-26)'
+      - '1.5: 键盘导航与窗口交互集成 (2025-12-26)'
+      - '1.6: 搜索过滤与收藏功能验证 (2025-12-26)'
+    stories_remaining: []
   epic-2:
     status: 'backlog'
 ---
