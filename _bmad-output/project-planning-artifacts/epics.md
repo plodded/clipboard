@@ -13,6 +13,19 @@ workflowType: 'epics-and-stories'
 project_name: 'MacPaste'
 user_name: 'Boss'
 date: '2025-12-24'
+implementation_progress:
+  epic-1:
+    status: 'in-progress'
+    stories_completed:
+      - '1.1: NSPanel 浮动窗口 (2025-12-26)'
+      - '1.2: 全局快捷键 (2025-12-26)'
+      - '1.3: 系统托盘与 Dock 隐藏 (2025-12-26)'
+    stories_remaining:
+      - '1.4: Zustand 状态管理迁移'
+      - '1.5: 键盘导航与窗口交互集成'
+      - '1.6: 搜索过滤与收藏功能验证'
+  epic-2:
+    status: 'backlog'
 ---
 
 # MacPaste - Epic Breakdown
@@ -227,7 +240,7 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 **Given** 应用已启动并运行
 **When** 面板被触发显示
 **Then** 显示无边框的浮动面板，无标准窗口装饰（无标题栏、无关闭按钮）
-**And** 面板居中显示在屏幕上
+**And** 面板以全屏幕宽度显示在屏幕底部
 
 **Given** 面板处于显示状态
 **When** 用户的 Dock 栏处于屏幕底部
@@ -257,7 +270,7 @@ CREATE TABLE IF NOT EXISTS clipboard_items (
 
 **Given** 应用在后台运行，面板处于隐藏状态
 **When** 用户在任意应用中按下 `Cmd+Shift+V`
-**Then** MacPaste 面板立即显示在屏幕中央
+**Then** MacPaste 面板以全屏幕宽度显示在屏幕底部
 **And** 面板响应时间小于 200ms
 
 **Given** 面板处于显示状态
