@@ -27,7 +27,6 @@ pub fn run() {
 
     tauri::Builder::default()
         // 插件注册
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_nspanel::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()

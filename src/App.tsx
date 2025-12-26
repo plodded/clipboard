@@ -159,7 +159,8 @@ function App() {
 
   return (
     // Panel is always visible - NSPanel controls actual window visibility
-    <div className="w-screen h-[340px] bg-slate-900/85 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col">
+    // 高度使用 h-full 填充窗口，实际高度由 Rust 端 panel.rs 中的 PANEL_HEIGHT 定义
+    <div className="w-screen h-full bg-slate-900/85 backdrop-blur-2xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col">
 
       {/* Top Bar: Search, Filter & Status */}
       <div className="flex-none h-16 px-6 flex items-center justify-between border-b border-white/5 bg-black/10">
