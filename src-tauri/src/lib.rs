@@ -15,10 +15,15 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 // 全局 AppHandle 用于快捷键回调
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
+/// 创建切换面板的快捷键 (Cmd+Shift+V)
+/// 抽取为函数以符合 DRY 原则，避免在多处重复定义
+fn create_toggle_shortcut() -> Shortcut {
+    Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyV)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // 定义快捷键：Cmd+Shift+V
-    let shortcut = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyV);
+    let shortcut = create_toggle_shortcut();
 
     tauri::Builder::default()
         // 插件注册
@@ -75,8 +80,7 @@ pub fn run() {
             }
 
             // 4. 注册全局快捷键 Cmd+Shift+V
-            let shortcut = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyV);
-            app.global_shortcut().register(shortcut)?;
+            app.global_shortcut().register(create_toggle_shortcut())?;
             log::info!("Global shortcut Cmd+Shift+V registered");
 
             log::info!("MacPaste initialized successfully");
@@ -104,7 +108,7 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let icon = app
         .default_window_icon()
         .cloned()
-        .expect("Failed to get default window icon");
+        .ok_or("Failed to get default window icon")?;
 
     // 创建托盘
     let _tray = TrayIconBuilder::new()

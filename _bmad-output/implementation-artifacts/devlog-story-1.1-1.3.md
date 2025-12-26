@@ -112,9 +112,11 @@
 |------|----------|
 | `src-tauri/src/lib.rs` | 完全重写：插件注册、setup hook、托盘、快捷键 |
 | `src-tauri/Cargo.toml` | 添加 tray-icon feature、global-shortcut、log 依赖 |
-| `src-tauri/tauri.conf.json` | 移除默认窗口配置 |
+| `src-tauri/tauri.conf.json` | 移除默认窗口配置、配置 CSP 安全策略 |
 | `src-tauri/capabilities/default.json` | 添加权限配置 |
 | `src/App.tsx` | 移除模拟快捷键、添加失焦隐藏、简化渲染结构 |
+| `package.json` | 添加 @tauri-apps/plugin-global-shortcut、@tauri-apps/plugin-log 依赖 |
+| `package-lock.json` | npm 依赖锁文件更新 |
 
 ---
 
