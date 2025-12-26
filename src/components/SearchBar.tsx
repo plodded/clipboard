@@ -1,14 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
+import { useClipboardStore } from '../stores/clipboardStore';
 
 interface SearchBarProps {
-  query: string;
-  setQuery: (q: string) => void;
   isVisible: boolean;
 }
 
-function SearchBar({ query, setQuery, isVisible }: SearchBarProps) {
+function SearchBar({ isVisible }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Get state and action directly from store
+  const query = useClipboardStore((state) => state.searchQuery);
+  const setQuery = useClipboardStore((state) => state.setSearchQuery);
 
   useEffect(() => {
     if (isVisible) {
@@ -38,6 +41,6 @@ function SearchBar({ query, setQuery, isVisible }: SearchBarProps) {
       />
     </div>
   );
-};
+}
 
 export default SearchBar;
