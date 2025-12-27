@@ -7,6 +7,7 @@ import FilterBar from './components/FilterBar';
 import SearchBar from './components/SearchBar';
 import { cn } from './utils';
 import { ClipboardList, SearchX } from 'lucide-react';
+import { startClipboardListening, stopClipboardListening, setErrorCallback } from './services/clipboard';
 
 function App() {
   // --- State from Zustand Store ---
@@ -39,6 +40,39 @@ function App() {
     window.addEventListener('blur', handleBlur);
     return () => window.removeEventListener('blur', handleBlur);
   }, []);
+
+  // --- Clipboard Listening Lifecycle ---
+  useEffect(() => {
+    let mounted = true;
+
+    // 设置错误回调（用于重试失败后显示 Toast）
+    setErrorCallback((message) => {
+      if (mounted) {
+        showToast(message);
+        setTimeout(hideToast, 3000);
+      }
+    });
+
+    const initClipboardListening = async () => {
+      try {
+        await startClipboardListening();
+        if (mounted) {
+          console.log('[Clipboard] Listening started successfully');
+        }
+      } catch (err) {
+        console.error('[Clipboard] Failed to start listening:', err);
+        // 错误已通过 setErrorCallback 处理，这里不需要额外处理
+      }
+    };
+
+    initClipboardListening();
+
+    return () => {
+      mounted = false;
+      setErrorCallback(null);
+      stopClipboardListening().catch(console.error);
+    };
+  }, [showToast, hideToast]);
 
   // --- Auto-focus search on window focus ---
   // 当窗口重新获得焦点时，确保搜索框聚焦

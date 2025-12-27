@@ -20,3 +20,16 @@ export const formatTime = (timestamp: number): string => {
   if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
   return new Date(timestamp).toLocaleDateString();
 };
+
+/**
+ * 生成唯一 ID
+ *
+ * 使用 crypto.randomUUID() 如果可用，否则回退到简单的随机字符串。
+ */
+export const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+};

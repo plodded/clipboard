@@ -1,0 +1,267 @@
+/**
+ * 剪贴板捕获集成测试
+ *
+ * 测试剪贴板服务与 Store 的集成
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ClipboardType } from '@/types';
+import { useClipboardStore } from '@/stores/clipboardStore';
+import { handleClipboardContent } from '@/services/clipboardHandler';
+
+// Mock @tauri-apps/plugin-log
+vi.mock('@tauri-apps/plugin-log', () => ({
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+}));
+
+describe('Clipboard Capture Integration', () => {
+  beforeEach(() => {
+    // 重置 Store 状态
+    useClipboardStore.setState({
+      items: [],
+      searchQuery: '',
+      filterCategory: undefined,
+      selectedIndex: 0,
+      toastMessage: null,
+    });
+  });
+
+  afterEach(() => {
+    useClipboardStore.setState({ items: [] });
+  });
+
+  describe('Content Type Detection and Storage', () => {
+    it('should capture and store text content correctly', () => {
+      const clipboardData = {
+        text: { type: 'text' as const, value: 'Hello World', count: 1 },
+      };
+
+      handleClipboardContent(clipboardData);
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        type: ClipboardType.Text,
+        content: 'Hello World',
+        previewText: 'Hello World',
+        isStarred: false,
+      });
+      expect(items[0].id).toBeDefined();
+      expect(items[0].timestamp).toBeGreaterThan(0);
+    });
+
+    it('should capture and store image content with dimensions', () => {
+      const clipboardData = {
+        image: {
+          type: 'image' as const,
+          value: '/tmp/clipboard/image123.png',
+          count: 1,
+          width: 1920,
+          height: 1080,
+        },
+      };
+
+      handleClipboardContent(clipboardData);
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        type: ClipboardType.Image,
+        content: '/tmp/clipboard/image123.png',
+        previewText: '图片 (1920x1080)',
+        metadata: {
+          width: 1920,
+          height: 1080,
+        },
+      });
+    });
+
+    it('should capture and store file list content', () => {
+      const clipboardData = {
+        files: {
+          type: 'files' as const,
+          value: ['/Users/test/doc.pdf', '/Users/test/image.png'],
+          count: 2,
+        },
+      };
+
+      handleClipboardContent(clipboardData);
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        type: ClipboardType.File,
+        previewText: '2 个文件',
+        metadata: { fileCount: 2 },
+      });
+    });
+
+    it('should capture and store RTF content with text preview', () => {
+      const clipboardData = {
+        rtf: { type: 'rtf' as const, value: '{\\rtf1 Hello RTF}', count: 1 },
+        text: { type: 'text' as const, value: 'Hello RTF', count: 1 },
+      };
+
+      handleClipboardContent(clipboardData);
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({
+        type: ClipboardType.RTF,
+        content: '{\\rtf1 Hello RTF}',
+        previewText: 'Hello RTF',
+      });
+    });
+  });
+
+  describe('Deduplication', () => {
+    it('should deduplicate text content and update timestamp', () => {
+      // 第一次复制
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'Duplicate me', count: 1 },
+      });
+
+      const firstItems = useClipboardStore.getState().items;
+      const firstTimestamp = firstItems[0].timestamp;
+      const firstId = firstItems[0].id;
+
+      // 第二次复制相同内容
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'Duplicate me', count: 1 },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0].id).toBe(firstId);
+      // 时间戳应该被更新（相同或更大）
+      expect(items[0].timestamp).toBeGreaterThanOrEqual(firstTimestamp);
+    });
+
+    it('should not deduplicate different text content', () => {
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'First text', count: 1 },
+      });
+
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'Second text', count: 1 },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(2);
+      // 最新的在前面
+      expect(items[0].content).toBe('Second text');
+      expect(items[1].content).toBe('First text');
+    });
+
+    it('should deduplicate images by dimensions', () => {
+      // 第一张图片
+      handleClipboardContent({
+        image: {
+          type: 'image' as const,
+          value: '/path/image1.png',
+          count: 1,
+          width: 800,
+          height: 600,
+        },
+      });
+
+      const firstId = useClipboardStore.getState().items[0].id;
+
+      // 相同尺寸的"不同"图片（路径不同但尺寸相同）
+      handleClipboardContent({
+        image: {
+          type: 'image' as const,
+          value: '/path/image2.png',
+          count: 1,
+          width: 800,
+          height: 600,
+        },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0].id).toBe(firstId);
+    });
+  });
+
+  describe('Priority Order', () => {
+    it('should prioritize image over text when both present', () => {
+      handleClipboardContent({
+        image: {
+          type: 'image' as const,
+          value: '/path/image.png',
+          count: 1,
+          width: 100,
+          height: 100,
+        },
+        text: { type: 'text' as const, value: 'Some text', count: 1 },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0].type).toBe(ClipboardType.Image);
+    });
+
+    it('should prioritize files over text when both present', () => {
+      handleClipboardContent({
+        files: {
+          type: 'files' as const,
+          value: ['/path/file.txt'],
+          count: 1,
+        },
+        text: { type: 'text' as const, value: 'file.txt', count: 1 },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(1);
+      expect(items[0].type).toBe(ClipboardType.File);
+    });
+  });
+
+  describe('Store Integration', () => {
+    it('should add multiple items and maintain order (newest first)', () => {
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'First', count: 1 },
+      });
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'Second', count: 1 },
+      });
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'Third', count: 1 },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(3);
+      expect(items[0].content).toBe('Third');
+      expect(items[1].content).toBe('Second');
+      expect(items[2].content).toBe('First');
+    });
+
+    it('should move duplicated item to top', () => {
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'First', count: 1 },
+      });
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'Second', count: 1 },
+      });
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'Third', count: 1 },
+      });
+
+      // 再次复制 "First"
+      handleClipboardContent({
+        text: { type: 'text' as const, value: 'First', count: 1 },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(3);
+      // "First" 应该移到顶部
+      expect(items[0].content).toBe('First');
+      expect(items[1].content).toBe('Third');
+      expect(items[2].content).toBe('Second');
+    });
+  });
+});

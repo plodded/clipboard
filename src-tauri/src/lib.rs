@@ -28,6 +28,7 @@ pub fn run() {
     tauri::Builder::default()
         // 插件注册
         .plugin(tauri_nspanel::init())
+        .plugin(tauri_plugin_clipboard_x::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |_app, shortcut_matched, event| {
