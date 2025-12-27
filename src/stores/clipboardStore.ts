@@ -79,10 +79,7 @@ export const useClipboardStore = create<ClipboardStore>()((set, get) => ({
       await saveClipboardItem(item);
     } catch (error) {
       console.error('Failed to save item to database:', error);
-      // Optionally rollback on failure
-      // set((state) => ({
-      //   items: state.items.filter((i) => i.id !== item.id),
-      // }));
+      get().showToast('保存失败，请重试');
     }
   },
 
@@ -128,6 +125,7 @@ export const useClipboardStore = create<ClipboardStore>()((set, get) => ({
       await dbDeleteItem(id);
     } catch (error) {
       console.error('Failed to delete item from database:', error);
+      get().showToast('删除失败，请重试');
     }
   },
 
