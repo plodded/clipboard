@@ -17,6 +17,14 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
 }));
 
+// Mock database service (Story 2.2)
+vi.mock('@/services/database', () => ({
+  getClipboardItems: vi.fn().mockResolvedValue([]),
+  saveClipboardItem: vi.fn().mockResolvedValue(undefined),
+  deleteClipboardItem: vi.fn().mockResolvedValue(undefined),
+  updateItemTimestamp: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('Clipboard Capture Integration', () => {
   beforeEach(() => {
     // 重置 Store 状态
@@ -26,6 +34,8 @@ describe('Clipboard Capture Integration', () => {
       filterCategory: undefined,
       selectedIndex: 0,
       toastMessage: null,
+      isDbLoaded: true, // Skip database loading in tests
+      isLoading: false,
     });
   });
 

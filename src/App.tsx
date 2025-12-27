@@ -16,8 +16,10 @@ function App() {
   const filterCategory = useClipboardStore((state) => state.filterCategory);
   const selectedIndex = useClipboardStore((state) => state.selectedIndex);
   const toastMessage = useClipboardStore((state) => state.toastMessage);
+  const isDbLoaded = useClipboardStore((state) => state.isDbLoaded);
 
   // --- Actions from Store ---
+  const loadFromDatabase = useClipboardStore((state) => state.loadFromDatabase);
   const setItems = useClipboardStore((state) => state.setItems);
   const setSearchQuery = useClipboardStore((state) => state.setSearchQuery);
   const setFilterCategory = useClipboardStore((state) => state.setFilterCategory);
@@ -25,6 +27,14 @@ function App() {
   const showToast = useClipboardStore((state) => state.showToast);
   const hideToast = useClipboardStore((state) => state.hideToast);
   const toggleStarAction = useClipboardStore((state) => state.toggleStar);
+
+  // --- Database Loading on App Startup ---
+  // Story 2.2: Load clipboard history from SQLite database
+  useEffect(() => {
+    if (!isDbLoaded) {
+      loadFromDatabase();
+    }
+  }, [isDbLoaded, loadFromDatabase]);
 
   // --- Refs (not migrated to store - DOM references) ---
   const scrollContainerRef = useRef<HTMLDivElement>(null);

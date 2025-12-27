@@ -18,6 +18,14 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
 }));
 
+// Mock database service (Story 2.2)
+vi.mock('@/services/database', () => ({
+  getClipboardItems: vi.fn().mockResolvedValue([]),
+  saveClipboardItem: vi.fn().mockResolvedValue(undefined),
+  deleteClipboardItem: vi.fn().mockResolvedValue(undefined),
+  updateItemTimestamp: vi.fn().mockResolvedValue(undefined),
+}));
+
 describe('ClipboardHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();

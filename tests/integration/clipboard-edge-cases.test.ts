@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ClipboardType } from '@/types';
 import type { ClipboardItem } from '@/types';
 import { useClipboardStore } from '@/stores/clipboardStore';
-import { handleClipboardContent, detectContent, findDuplicateId } from '@/services/clipboardHandler';
+import { handleClipboardContent, detectContent } from '@/services/clipboardHandler';
 
 // Mock @tauri-apps/plugin-log
 vi.mock('@tauri-apps/plugin-log', () => ({
@@ -25,6 +25,14 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   warn: vi.fn(),
   info: vi.fn(),
   debug: vi.fn(),
+}));
+
+// Mock database service (Story 2.2)
+vi.mock('@/services/database', () => ({
+  getClipboardItems: vi.fn().mockResolvedValue([]),
+  saveClipboardItem: vi.fn().mockResolvedValue(undefined),
+  deleteClipboardItem: vi.fn().mockResolvedValue(undefined),
+  updateItemTimestamp: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('Story 2.1: Edge Cases and Performance Tests', () => {
@@ -36,6 +44,8 @@ describe('Story 2.1: Edge Cases and Performance Tests', () => {
       filterCategory: undefined,
       selectedIndex: 0,
       toastMessage: null,
+      isDbLoaded: true, // Skip database loading in tests
+      isLoading: false,
     });
   });
 
