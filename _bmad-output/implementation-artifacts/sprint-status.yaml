@@ -57,7 +57,7 @@ development_status:
   # ============================================
   epic-2: in-progress  # 2025-12-27 first story created
   2-1-clipboard-listening-and-content-capture: done  # 2025-12-27 completed - all acceptance criteria met, 77 tests passing
-  2-2-sqlite-data-persistence: backlog
+  2-2-sqlite-data-persistence: ready-for-dev  # 2025-12-27 story created
   2-3-image-storage-and-loading: backlog
   2-4-clipboard-write-and-auto-paste: backlog
   2-5-search-filter-backend-implementation: backlog
