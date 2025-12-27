@@ -50,7 +50,7 @@ development_status:
   1-4-zustand-state-management-migration: done  # 2025-12-26 completed
   1-5-keyboard-navigation-and-window-integration: done  # 2025-12-27 completed
   1-6-search-filter-and-favorites-validation: done      # 2025-12-27 completed
-  epic-1-retrospective: optional
+  epic-1-retrospective: done  # 2025-12-27 retrospective completed
 
   # ============================================
   # Epic 2: 真实数据层 (Real Data Layer)
