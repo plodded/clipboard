@@ -227,7 +227,8 @@ jobs:
         id: changed-tests
         run: |
           # 只匹配 .spec.ts/.spec.tsx (E2E 测试)，排除 .test.ts (单元测试)
-          CHANGED_SPECS=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.spec\.(ts|tsx)$' || echo "")
+          # 使用 tr 将换行符转换为空格，避免 GITHUB_OUTPUT 多行格式问题
+          CHANGED_SPECS=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.spec\.(ts|tsx)$' | tr '\n' ' ' | xargs || echo "")
           echo "specs=${CHANGED_SPECS}" >> $GITHUB_OUTPUT
           if [ -n "$CHANGED_SPECS" ]; then
             echo "Found changed E2E test files:"
