@@ -156,34 +156,66 @@ describe('Clipboard Capture Integration', () => {
       expect(items[1].content).toBe('First text');
     });
 
-    it('should deduplicate images by dimensions', () => {
-      // 第一张图片
+    // 图片使用路径比较去重
+    // 同一次截屏触发两次事件 → 路径相同 → 去重
+    it('should deduplicate images by path (same screenshot triggers twice)', () => {
+      // 第一次事件
       handleClipboardContent({
         image: {
           type: 'image' as const,
-          value: '/path/image1.png',
+          value: '/tmp/screenshot-same.png',
           count: 1,
-          width: 800,
-          height: 600,
+          width: 1920,
+          height: 1080,
         },
       });
 
       const firstId = useClipboardStore.getState().items[0].id;
 
-      // 相同尺寸的"不同"图片（路径不同但尺寸相同）
+      // 第二次事件（同一张图片，路径相同）
       handleClipboardContent({
         image: {
           type: 'image' as const,
-          value: '/path/image2.png',
+          value: '/tmp/screenshot-same.png', // 相同路径
           count: 1,
-          width: 800,
-          height: 600,
+          width: 1920,
+          height: 1080,
         },
       });
 
       const { items } = useClipboardStore.getState();
-      expect(items).toHaveLength(1);
-      expect(items[0].id).toBe(firstId);
+      expect(items).toHaveLength(1); // 只保留一条记录
+      expect(items[0].id).toBe(firstId); // 更新时间戳，保持同一记录
+    });
+
+    // 多次截屏不同图片 → 路径不同 → 不去重
+    it('should not deduplicate images with different paths (multiple screenshots)', () => {
+      // 第一次截屏
+      handleClipboardContent({
+        image: {
+          type: 'image' as const,
+          value: '/tmp/screenshot-1.png',
+          count: 1,
+          width: 1920,
+          height: 1080,
+        },
+      });
+
+      // 第二次截屏（不同图片，不同路径）
+      handleClipboardContent({
+        image: {
+          type: 'image' as const,
+          value: '/tmp/screenshot-2.png', // 不同路径
+          count: 1,
+          width: 1920,
+          height: 1080, // 尺寸相同但路径不同
+        },
+      });
+
+      const { items } = useClipboardStore.getState();
+      expect(items).toHaveLength(2); // 两张图片都应该保留
+      expect(items[0].content).toBe('/tmp/screenshot-2.png');
+      expect(items[1].content).toBe('/tmp/screenshot-1.png');
     });
   });
 

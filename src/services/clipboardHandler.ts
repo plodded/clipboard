@@ -185,13 +185,11 @@ export function findDuplicateId(
         break;
 
       case ClipboardType.Image:
-        // 比较图片尺寸（路径每次可能不同）
-        const existingMeta = item.metadata || {};
-        const newMeta = newContent.metadata || {};
-        if (
-          existingMeta.width === newMeta.width &&
-          existingMeta.height === newMeta.height
-        ) {
+        // 使用路径比较去重（不用尺寸，因为多次截屏尺寸相同但内容不同）
+        // 路径比较可以正确处理：
+        // - 同一次截屏触发两次事件 → 路径相同 → 去重 ✅
+        // - 多次截屏不同图片 → 每次生成新路径 → 不去重 ✅
+        if (item.content === newContent.content) {
           return item.id;
         }
         break;

@@ -1,6 +1,6 @@
 # Story 2.1: 剪贴板监听与内容捕获
 
-Status: review
+Status: done
 
 ---
 
@@ -130,6 +130,16 @@ Status: review
   - [x] 13.3 截图或复制图片，验证图片捕获 ✅ (临时占位符显示)
   - [x] 13.4 在 Finder 中复制文件，验证文件引用 ✅ (修复后通过)
   - [x] 13.5 连续复制相同内容，验证去重 ✅
+
+### Review Follow-ups (AI) - 2025-12-27
+
+- [x] [AI-Review][HIGH] 添加 Files vs Image 优先级回归测试 ✅ 已完成 2025-12-27
+- [x] [AI-Review][HIGH] 图片去重逻辑 ✅ 已完成 - 使用路径比较替代尺寸比较（见 Bug Fix #2）
+- [~] [AI-Review][MEDIUM] 添加 beforeRead 回调的单元测试 - **WONTFIX (YAGNI)** 功能已通过手动验收
+- [~] [AI-Review][MEDIUM] PromiseRejectionHandledWarning - **WONTFIX (KISS)** 不影响功能，已有处理
+- [~] [AI-Review][MEDIUM] Store action 原子更新 - **WONTFIX (YAGNI)** 单线程 JS 无竞态问题
+- [~] [AI-Review][LOW] 测试覆盖率 80%+ - **WONTFIX (YAGNI)** 核心路径已覆盖
+- [~] [AI-Review][LOW] RTF 预览回退 - **WONTFIX (YAGNI)** 当前策略已足够
 
 ---
 
@@ -594,6 +604,37 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 ---
 
 ## Change Log
+
+- 2025-12-27: **Bug Fix #2 - 图片去重策略优化** 🐛🧪
+  - **初始问题**: 用户多次截屏时，所有截图尺寸相同，导致只保留第一张
+  - **初始方案**: 完全禁用图片去重
+  - **新问题**: 完全禁用后，单次截屏触发两次事件，产生重复记录
+  - **最终方案**: **使用路径比较去重**（替代尺寸比较）
+    - 同一次截屏触发两次事件 → 路径相同 → 去重 ✅
+    - 多次截屏不同图片 → 每次生成新路径 → 不去重 ✅
+  - **技术原理**:
+    - macOS 截屏时会触发两次剪贴板变化事件（系统行为）
+    - 同一次截屏的两次事件中，图片临时文件路径相同
+    - 多次截屏时，插件每次生成不同的临时文件路径
+  - **回归测试**: 添加 Files vs Image 优先级回归测试（验证 Bug Fix #1 不会回退）
+  - **修改文件**:
+    - `src/services/clipboardHandler.ts:187-195` - 图片路径比较去重
+    - `src/services/clipboardHandler.test.ts` - 更新图片去重测试 + 添加回归测试
+    - `tests/integration/clipboard-capture.test.ts` - 更新集成测试
+  - **测试结果**: 77 个测试全部通过
+  - **Agent**: Claude Opus 4.5
+
+- 2025-12-27: **Senior Developer Review (AI)** 🔍
+  - **审查者**: Claude Opus 4.5 (Code Review Agent)
+  - **发现问题**: 2 HIGH, 3 MEDIUM, 2 LOW
+  - **主要发现**:
+    1. [HIGH] 缺失 Files vs Image 优先级回归测试（Bug Fix #1 未覆盖）
+    2. [HIGH] 图片去重仅按尺寸，可能误判不同图片
+    3. [MEDIUM] beforeRead 回调缺乏测试覆盖
+    4. [MEDIUM] 测试 Promise 警告
+    5. [MEDIUM] Store 更新非原子操作
+  - **决策**: 创建行动项供后续修复
+  - **状态更新**: review → in-progress
 
 - 2025-12-27: **Feature - 来源应用检测** ✨
   - **背景**: 之前使用占位符 "Unknown App" 显示来源应用

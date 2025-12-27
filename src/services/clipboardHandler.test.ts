@@ -150,6 +150,32 @@ describe('ClipboardHandler', () => {
       expect(result!.type).toBe(ClipboardType.File);
     });
 
+    // 回归测试：Bug Fix #1 - 文件复制被误识别为图像
+    // macOS 复制文件时同时包含文件路径和文件图标图像数据
+    // Files 必须优先于 Image 检测，否则文件复制会变成图标图像
+    it('should prioritize files over image (regression test for Bug Fix #1)', () => {
+      const data = {
+        files: {
+          type: 'files' as const,
+          value: ['/Users/test/Documents/report.pdf'],
+          count: 1,
+        },
+        image: {
+          type: 'image' as const,
+          value: '/tmp/file-icon.png', // 文件图标
+          count: 1,
+          width: 64,
+          height: 64,
+        },
+        text: { type: 'text' as const, value: 'report.pdf', count: 1 },
+      };
+
+      const result = detectContent(data);
+
+      expect(result!.type).toBe(ClipboardType.File);
+      expect(result!.previewText).toBe('report.pdf');
+    });
+
     it('should return null for empty data', () => {
       const result = detectContent({});
 
@@ -207,30 +233,32 @@ describe('ClipboardHandler', () => {
       expect(result).toBe('text-1');
     });
 
-    it('should find duplicate image by dimensions', () => {
+    // 图片使用路径比较去重（不用尺寸，因为多次截屏尺寸相同但内容不同）
+    it('should deduplicate images by path (same screenshot triggers twice)', () => {
       const newContent = {
         type: ClipboardType.Image,
-        content: '/different/path.png',
+        content: '/path/to/image.png', // 与 existingItems 中的路径相同
         previewText: '图片',
         metadata: { width: 800, height: 600 },
       };
 
       const result = findDuplicateId(newContent, existingItems);
 
-      expect(result).toBe('image-1');
+      expect(result).toBe('image-1'); // 路径相同，视为重复
     });
 
-    it('should not find duplicate for different image dimensions', () => {
+    // 多次截屏不同图片 → 路径不同 → 不去重
+    it('should not deduplicate images with different paths (multiple screenshots)', () => {
       const newContent = {
         type: ClipboardType.Image,
-        content: '/path.png',
+        content: '/path/to/screenshot-2.png', // 不同路径
         previewText: '图片',
-        metadata: { width: 1920, height: 1080 },
+        metadata: { width: 800, height: 600 }, // 即使尺寸相同，路径不同也不去重
       };
 
       const result = findDuplicateId(newContent, existingItems);
 
-      expect(result).toBeNull();
+      expect(result).toBeNull(); // 不同路径，视为新内容
     });
 
     it('should find duplicate file paths', () => {
