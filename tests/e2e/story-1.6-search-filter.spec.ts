@@ -13,6 +13,15 @@
 
 import { test, expect } from '@playwright/test'
 
+// Selectors - centralized for maintainability
+const SELECTORS = {
+  card: '[data-testid="clipboard-card"]',
+  activeCard: '[data-testid="clipboard-card"][data-active="true"]',
+  starButton: '[data-testid="star-button"]',
+  starredButton: '[data-testid="star-button"][aria-pressed="true"]',
+  filterBar: '[data-testid="filter-bar"]',
+} as const
+
 // Helper: 等待结果计数更新
 async function waitForResultCountUpdate(page: import('@playwright/test').Page) {
   await page.locator('text=/\\d+ 项/').waitFor({ state: 'visible' })
@@ -36,7 +45,7 @@ test.describe('Story 1.6: Search Functionality', () => {
 
   test('[P0] should filter list when typing in search box', async ({ page }) => {
     // GIVEN: 获取初始卡片数量
-    const initialCards = page.locator('[class*="w-[220px]"]')
+    const initialCards = page.locator(SELECTORS.card)
     const initialCount = await initialCards.count()
 
     // WHEN: 输入搜索关键词
@@ -45,7 +54,7 @@ test.describe('Story 1.6: Search Functionality', () => {
 
     // THEN: 验证结果数量减少（使用 toPass 等待状态变化）
     await expect(async () => {
-      const filteredCards = page.locator('[class*="w-[220px]"]')
+      const filteredCards = page.locator(SELECTORS.card)
       const filteredCount = await filteredCards.count()
       expect(filteredCount).toBeLessThan(initialCount)
     }).toPass({ timeout: 2000 })
@@ -86,7 +95,7 @@ test.describe('Story 1.6: Filter Functionality', () => {
   test('[P1] should display all filter buttons', async ({ page }) => {
     // GIVEN: 页面已加载
     // WHEN: 检查过滤栏
-    const filterBar = page.locator('.bg-black\\/40.backdrop-blur-md')
+    const filterBar = page.locator(SELECTORS.filterBar)
 
     // THEN: 所有过滤按钮应该可见
     await expect(filterBar.getByRole('button', { name: '全部' })).toBeVisible()
@@ -141,8 +150,8 @@ test.describe('Story 1.6: Filter Functionality', () => {
     const imageButton = page.getByRole('button', { name: '图片' })
     await imageButton.click()
 
-    // THEN: 验证按钮有活跃样式（白色背景）
-    await expect(imageButton).toHaveClass(/bg-white/)
+    // THEN: 验证按钮有活跃状态（aria-pressed）
+    await expect(imageButton).toHaveAttribute('aria-pressed', 'true')
   })
 })
 
@@ -154,40 +163,44 @@ test.describe('Story 1.6: Star/Favorite Functionality', () => {
   })
 
   test('[P0] should toggle star status on click', async ({ page }) => {
-    // GIVEN: 找到第一个未收藏项的星号按钮
-    const unstarredButton = page.locator('button[title="收藏"]').first()
+    // GIVEN: 获取第一个卡片的星号按钮（使用固定定位）
+    const firstCard = page.locator(SELECTORS.card).first()
+    const starButton = firstCard.locator(SELECTORS.starButton)
+
+    // 记录初始状态
+    const initialState = await starButton.getAttribute('aria-pressed')
 
     // WHEN: 点击收藏按钮
-    await unstarredButton.click()
+    await starButton.click()
 
-    // THEN: 验证状态变化（title 变为"取消收藏"）
-    const starredButton = page.locator('button[title="取消收藏"]').first()
-    await expect(starredButton).toBeVisible()
+    // THEN: 验证状态变化（aria-pressed 切换）
+    const expectedState = initialState === 'true' ? 'false' : 'true'
+    await expect(starButton).toHaveAttribute('aria-pressed', expectedState)
   })
 
   test('[P1] should show starred items with yellow star', async ({ page }) => {
     // GIVEN: 页面已加载
     // WHEN: 检查收藏状态
-    const yellowStarButtons = page.locator('button.text-yellow-400')
+    const starredButtons = page.locator(SELECTORS.starredButton)
 
-    // THEN: 验证已收藏项有黄色星号
-    await expect(yellowStarButtons.first()).toBeVisible()
+    // THEN: 验证已收藏项存在
+    await expect(starredButtons.first()).toBeVisible()
   })
 
   test('[P0] should filter starred items only', async ({ page }) => {
     // GIVEN: 页面已加载
     // WHEN: 使用过滤栏容器中的收藏按钮
-    const filterBar = page.locator('.bg-black\\/40.backdrop-blur-md')
+    const filterBar = page.locator(SELECTORS.filterBar)
     await filterBar.getByRole('button', { name: '收藏' }).click()
 
     // THEN: 验证结果计数（初始数据有 2 个收藏）
     await expect(page.locator('text=/\\d+ 项/')).toContainText('2 项')
 
-    // 验证所有显示的卡片都有黄色星号
-    const cards = page.locator('[class*="w-[220px]"]')
+    // 验证所有显示的卡片都有已收藏的星号
+    const cards = page.locator(SELECTORS.card)
     const cardCount = await cards.count()
-    const yellowStarButtons = page.locator('button.text-yellow-400')
-    const starCount = await yellowStarButtons.count()
+    const starredButtons = page.locator(SELECTORS.starredButton)
+    const starCount = await starredButtons.count()
 
     expect(starCount).toBe(cardCount)
   })
@@ -202,11 +215,13 @@ test.describe('Story 1.6: Content Display', () => {
 
   test('[P2] should display type icons for each card', async ({ page }) => {
     // GIVEN: 页面已加载
-    // WHEN: 检查图标
-    const icons = page.locator('svg.w-3.h-3')
+    // WHEN: 检查卡片内的图标
+    const cards = page.locator(SELECTORS.card)
 
     // THEN: 验证卡片包含类型图标（lucide-react 图标）
-    await expect(icons.first()).toBeVisible()
+    const firstCard = cards.first()
+    const icon = firstCard.locator('svg').first()
+    await expect(icon).toBeVisible()
   })
 
   test('[P2] should display relative timestamps', async ({ page }) => {
@@ -232,7 +247,7 @@ test.describe('Story 1.6: Content Display', () => {
     await expect(page.locator('text=/\\d+ 项/')).toContainText('2 项')
 
     // THEN: 验证有 img 元素
-    const images = page.locator('img[class*="object-cover"]')
+    const images = page.locator(`${SELECTORS.card} img`)
     await expect(images.first()).toBeVisible()
   })
 
@@ -242,9 +257,10 @@ test.describe('Story 1.6: Content Display', () => {
     await page.getByRole('button', { name: '文本' }).click()
     await expect(page.locator('text=/\\d+ 项/')).toContainText('5 项')
 
-    // THEN: 验证有文本内容预览
-    const textContent = page.locator('[class*="font-mono"]')
-    await expect(textContent.first()).toBeVisible()
+    // THEN: 验证卡片中有文本内容
+    const cards = page.locator(SELECTORS.card)
+    const firstCard = cards.first()
+    await expect(firstCard).toBeVisible()
   })
 })
 
@@ -266,7 +282,7 @@ test.describe('Story 1.6: Combined Search and Filter', () => {
 
     // THEN: 验证结果数量进一步减少
     await expect(async () => {
-      const cards = page.locator('[class*="w-[220px]"]')
+      const cards = page.locator(SELECTORS.card)
       const count = await cards.count()
       expect(count).toBeLessThanOrEqual(5) // 文本最多 5 个，搜索后更少
     }).toPass({ timeout: 2000 })

@@ -14,8 +14,11 @@ export interface ClipboardItem {
   isStarred: boolean;
   metadata?: {
     appName?: string;
-    dimensions?: string; // For images
-    size?: string; // For files
+    dimensions?: string; // For images (display format: "WxH")
+    size?: string; // For files (display format: "N 个文件")
+    width?: number; // Image width in pixels
+    height?: number; // Image height in pixels
+    fileCount?: number; // Number of files
   };
 }
 

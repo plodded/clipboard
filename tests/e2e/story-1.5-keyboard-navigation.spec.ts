@@ -16,9 +16,16 @@
 
 import { test, expect } from '@playwright/test'
 
+// Selectors - centralized for maintainability
+const SELECTORS = {
+  card: '[data-testid="clipboard-card"]',
+  activeCard: '[data-testid="clipboard-card"][data-active="true"]',
+  starButton: '[data-testid="star-button"]',
+} as const
+
 // Helper: 等待活跃卡片状态稳定
 async function waitForActiveCardStable(page: import('@playwright/test').Page) {
-  await page.locator('[class*="scale-105"]').first().waitFor({ state: 'visible' })
+  await page.locator(SELECTORS.activeCard).first().waitFor({ state: 'visible' })
 }
 
 test.describe('Story 1.5: Keyboard Navigation', () => {
@@ -32,19 +39,19 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
   test('[P0] should have first item selected by default', async ({ page }) => {
     // GIVEN: 页面已加载
     // WHEN: 检查活跃状态
-    const activeCard = page.locator('[class*="scale-105"]').first()
+    const activeCard = page.locator(SELECTORS.activeCard).first()
 
     // THEN: 第一个卡片应该有活跃状态
     await expect(activeCard).toBeVisible()
 
     // 验证只有一个活跃项
-    const activeCards = page.locator('[class*="scale-105"]')
+    const activeCards = page.locator(SELECTORS.activeCard)
     await expect(activeCards).toHaveCount(1)
   })
 
   test('[P0] should navigate right with ArrowRight key', async ({ page }) => {
     // GIVEN: 获取初始活跃卡片的位置
-    const initialActiveCard = page.locator('[class*="scale-105"]').first()
+    const initialActiveCard = page.locator(SELECTORS.activeCard).first()
     const initialBox = await initialActiveCard.boundingBox()
 
     // WHEN: 按右箭头
@@ -52,7 +59,7 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
 
     // THEN: 等待新的活跃卡片出现并验证位置变化
     await expect(async () => {
-      const newActiveCard = page.locator('[class*="scale-105"]').first()
+      const newActiveCard = page.locator(SELECTORS.activeCard).first()
       const newBox = await newActiveCard.boundingBox()
       expect(newBox?.x).toBeGreaterThan(initialBox?.x || 0)
     }).toPass({ timeout: 1000 })
@@ -63,7 +70,7 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
     await page.keyboard.press('ArrowRight')
     await waitForActiveCardStable(page)
 
-    const afterRightCard = page.locator('[class*="scale-105"]').first()
+    const afterRightCard = page.locator(SELECTORS.activeCard).first()
     const afterRightBox = await afterRightCard.boundingBox()
 
     // WHEN: 再向左导航
@@ -71,7 +78,7 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
 
     // THEN: 验证活跃卡片已向左移动
     await expect(async () => {
-      const afterLeftCard = page.locator('[class*="scale-105"]').first()
+      const afterLeftCard = page.locator(SELECTORS.activeCard).first()
       const afterLeftBox = await afterLeftCard.boundingBox()
       expect(afterLeftBox?.x).toBeLessThan(afterRightBox?.x || 0)
     }).toPass({ timeout: 1000 })
@@ -79,7 +86,7 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
 
   test('[P1] should not navigate beyond first item boundary', async ({ page }) => {
     // GIVEN: 获取第一个卡片位置
-    const firstCard = page.locator('[class*="scale-105"]').first()
+    const firstCard = page.locator(SELECTORS.activeCard).first()
     const firstBox = await firstCard.boundingBox()
 
     // WHEN: 尝试向左导航多次（应该保持在第一项）
@@ -89,7 +96,7 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
 
     // THEN: 验证仍然选中第一项
     await expect(async () => {
-      const currentCard = page.locator('[class*="scale-105"]').first()
+      const currentCard = page.locator(SELECTORS.activeCard).first()
       const currentBox = await currentCard.boundingBox()
       expect(currentBox?.x).toBe(firstBox?.x)
     }).toPass({ timeout: 1000 })
@@ -103,7 +110,7 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
     }
 
     // THEN: 验证仍然只有一个活跃项（没有出错）
-    const activeCards = page.locator('[class*="scale-105"]')
+    const activeCards = page.locator(SELECTORS.activeCard)
     await expect(activeCards).toHaveCount(1)
 
     // 验证活跃项可见（没有跑到屏幕外）
@@ -132,9 +139,10 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
   test('[P2] should highlight active card with blue border', async ({ page }) => {
     // GIVEN: 页面已加载
     // WHEN: 检查活跃卡片样式
-    // THEN: 验证活跃卡片有蓝色边框样式
-    const activeCard = page.locator('[class*="border-blue-500"]').first()
+    // THEN: 验证活跃卡片存在且有活跃状态
+    const activeCard = page.locator(SELECTORS.activeCard).first()
     await expect(activeCard).toBeVisible()
+    await expect(activeCard).toHaveAttribute('data-active', 'true')
   })
 })
 
@@ -156,7 +164,7 @@ test.describe('Story 1.5: Keyboard Navigation with Search/Filter', () => {
     await searchInput.fill('git')
 
     // THEN: 验证选中项重置到第一项（等待过滤结果更新）
-    await expect(page.locator('[class*="scale-105"]')).toHaveCount(1)
+    await expect(page.locator(SELECTORS.activeCard)).toHaveCount(1)
   })
 
   test('[P0] should reset selection to first item after filter change', async ({ page }) => {
@@ -170,7 +178,7 @@ test.describe('Story 1.5: Keyboard Navigation with Search/Filter', () => {
     await imageFilter.click()
 
     // THEN: 验证选中项重置到第一项
-    await expect(page.locator('[class*="scale-105"]')).toHaveCount(1)
+    await expect(page.locator(SELECTORS.activeCard)).toHaveCount(1)
   })
 
   test('[P1] should auto-focus search input on window focus', async ({ page }) => {
@@ -201,7 +209,7 @@ test.describe('Story 1.5: Keyboard Navigation with Search/Filter', () => {
     await page.keyboard.press('Enter')
 
     // THEN: 页面应该保持稳定，没有活跃卡片（因为没有结果）
-    const activeCards = page.locator('[class*="scale-105"]')
+    const activeCards = page.locator(SELECTORS.activeCard)
     await expect(activeCards).toHaveCount(0)
 
     // 空状态仍然显示

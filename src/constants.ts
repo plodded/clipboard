@@ -1,8 +1,5 @@
 import { ClipboardItem, ClipboardType } from './types';
 
-// Helper to generate mock ID
-export const generateId = (): string => Math.random().toString(36).substring(2, 9);
-
 // Mock data generator for initial state
 export const INITIAL_MOCK_DATA: ClipboardItem[] = [
   {
