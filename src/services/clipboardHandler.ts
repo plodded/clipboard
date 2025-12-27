@@ -235,13 +235,13 @@ export function handleClipboardContent(data: ReadClipboard): void {
 
   // 3. 获取 Store
   const store = useClipboardStore.getState();
-  const { items, addItem } = store;
+  const { items, addItem, updateItemTimestamp } = store;
 
   // 4. 检查去重
   const duplicateId = findDuplicateId(detected, items);
   if (duplicateId) {
     debug(`Duplicate content found: ${duplicateId}, updating timestamp`);
-    // 更新时间戳并移到顶部
+    // 更新时间戳并移到顶部（同时更新数据库）
     updateItemTimestamp(duplicateId);
     return;
   }
@@ -257,33 +257,7 @@ export function handleClipboardContent(data: ReadClipboard): void {
     metadata: detected.metadata,
   };
 
-  // 6. 添加到 Store
+  // 6. 添加到 Store（同时保存到数据库）
   addItem(newItem);
   info(`Added new clipboard item: ${newItem.type} - ${newItem.id}`);
-}
-
-/**
- * 更新已存在项的时间戳并移到顶部
- */
-function updateItemTimestamp(id: string): void {
-  const store = useClipboardStore.getState();
-  const { items, setItems } = store;
-
-  const index = items.findIndex((item) => item.id === id);
-  if (index === -1) return;
-
-  const updatedItem = {
-    ...items[index],
-    timestamp: Date.now(),
-  };
-
-  // 移除旧位置，添加到顶部
-  const newItems = [
-    updatedItem,
-    ...items.slice(0, index),
-    ...items.slice(index + 1),
-  ];
-
-  setItems(newItems);
-  info(`Updated timestamp for item: ${id}`);
 }

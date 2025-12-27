@@ -4,6 +4,8 @@
 mod commands;
 mod panel;
 
+use tauri_plugin_sql::{Builder as SqlBuilder, Migration, MigrationKind};
+
 use std::sync::OnceLock;
 use tauri::{
     menu::{Menu, MenuItem},
@@ -54,6 +56,22 @@ pub fn run() {
                     tauri_plugin_log::TargetKind::LogDir { file_name: None },
                 ))
                 .level(log::LevelFilter::Info)
+                .build(),
+        )
+        // SQLite 数据库插件 (Story 2.2)
+        .plugin(
+            SqlBuilder::default()
+                .add_migrations(
+                    "sqlite:macpaste.db",
+                    vec![
+                        Migration {
+                            version: 1,
+                            description: "create_clipboard_items_table",
+                            sql: include_str!("../migrations/001_create_clipboard_items.sql"),
+                            kind: MigrationKind::Up,
+                        },
+                    ],
+                )
                 .build(),
         )
         // 应用初始化
