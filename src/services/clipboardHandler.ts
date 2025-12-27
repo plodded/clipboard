@@ -13,6 +13,7 @@ import type { ClipboardItem } from '@/types';
 import { useClipboardStore } from '@/stores/clipboardStore';
 import { stripHtml, generateId } from '@/utils';
 import { debug, info } from '@tauri-apps/plugin-log';
+import { getLastFrontmostApp } from './clipboard';
 
 // ============================================================
 // 常量
@@ -227,11 +228,18 @@ export function handleClipboardContent(data: ReadClipboard): void {
     return;
   }
 
-  // 2. 获取 Store
+  // 2. 获取来源应用名称（在 beforeRead 回调中已更新）
+  const appName = getLastFrontmostApp();
+  if (detected.metadata) {
+    detected.metadata.appName = appName;
+  }
+  debug(`Source app: ${appName}`);
+
+  // 3. 获取 Store
   const store = useClipboardStore.getState();
   const { items, addItem } = store;
 
-  // 3. 检查去重
+  // 4. 检查去重
   const duplicateId = findDuplicateId(detected, items);
   if (duplicateId) {
     debug(`Duplicate content found: ${duplicateId}, updating timestamp`);
@@ -240,7 +248,7 @@ export function handleClipboardContent(data: ReadClipboard): void {
     return;
   }
 
-  // 4. 创建新的 ClipboardItem
+  // 5. 创建新的 ClipboardItem
   const newItem: ClipboardItem = {
     id: generateId(),
     type: detected.type,
@@ -251,7 +259,7 @@ export function handleClipboardContent(data: ReadClipboard): void {
     metadata: detected.metadata,
   };
 
-  // 5. 添加到 Store
+  // 6. 添加到 Store
   addItem(newItem);
   info(`Added new clipboard item: ${newItem.type} - ${newItem.id}`);
 }

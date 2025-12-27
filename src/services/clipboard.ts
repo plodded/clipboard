@@ -13,6 +13,7 @@ import {
   onClipboardChange,
   type ReadClipboard,
 } from 'tauri-plugin-clipboard-x-api';
+import { invoke } from '@tauri-apps/api/core';
 import { info, error as logError, debug } from '@tauri-apps/plugin-log';
 import { handleClipboardContent } from './clipboardHandler';
 
@@ -59,9 +60,21 @@ let retryCount = 0;
 /** 重试定时器 ID */
 let retryTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
+/** 最近一次检测到的前台应用名称 */
+let lastFrontmostApp: string = 'Unknown App';
+
 // ============================================================
 // 公共 API
 // ============================================================
+
+/**
+ * 获取最近一次剪贴板变化时的前台应用名称
+ *
+ * 此值在每次剪贴板变化事件的 beforeRead 回调中更新。
+ */
+export function getLastFrontmostApp(): string {
+  return lastFrontmostApp;
+}
 
 /**
  * 检查是否正在监听剪贴板
@@ -125,7 +138,19 @@ function startListeningInternal(): Promise<UnlistenFn> {
       info('Clipboard listening started');
       return onClipboardChange(
         handleClipboardChangeInternal,
-        { beforeRead: () => debug('Reading clipboard content...') }
+        {
+          beforeRead: async () => {
+            debug('Reading clipboard content...');
+            // 在读取剪贴板内容之前获取前台应用
+            try {
+              lastFrontmostApp = await invoke<string>('get_frontmost_app');
+              debug(`Frontmost app: ${lastFrontmostApp}`);
+            } catch (err) {
+              logError(`Failed to get frontmost app: ${err}`);
+              lastFrontmostApp = 'Unknown App';
+            }
+          }
+        }
       );
     })
     .then((unlisten) => {
@@ -219,6 +244,7 @@ export function _resetForTesting(): void {
     retryTimeoutId = null;
   }
   errorCallback = null;
+  lastFrontmostApp = 'Unknown App';
 }
 
 // ============================================================

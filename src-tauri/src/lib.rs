@@ -93,6 +93,7 @@ pub fn run() {
             commands::show_panel,
             commands::hide_panel,
             commands::toggle_panel,
+            commands::get_frontmost_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
