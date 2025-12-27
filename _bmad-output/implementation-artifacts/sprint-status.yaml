@@ -43,13 +43,13 @@ development_status:
   # ============================================
   # Epic 1: 演示版应用 (Demo App with Mock Data)
   # ============================================
-  epic-1: in-progress
+  epic-1: done  # 2025-12-27 all stories completed
   1-1-nspanel-floating-window: done          # 2025-12-26 completed
   1-2-global-shortcut-panel-toggle: done     # 2025-12-26 completed
   1-3-system-tray-dock-hiding: done          # 2025-12-26 completed
   1-4-zustand-state-management-migration: done  # 2025-12-26 completed
-  1-5-keyboard-navigation-and-window-integration: backlog
-  1-6-search-filter-and-favorites-validation: backlog
+  1-5-keyboard-navigation-and-window-integration: done  # 2025-12-27 completed
+  1-6-search-filter-and-favorites-validation: done      # 2025-12-27 completed
   epic-1-retrospective: optional
 
   # ============================================

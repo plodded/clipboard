@@ -7,19 +7,34 @@
  * NSPanel 真实窗口行为（如 hide_panel）需要手动验收测试。
  *
  * FRs covered: FR19, FR20, FR22, FR23, FR24
+ *
+ * Priority Guide:
+ * - [P0] Critical paths, run on every commit
+ * - [P1] High priority, run on PR to main
+ * - [P2] Medium priority, run nightly
  */
 
 import { test, expect } from '@playwright/test'
+
+// Helper: 等待活跃卡片状态稳定
+async function waitForActiveCardStable(page: import('@playwright/test').Page) {
+  await page.locator('[class*="scale-105"]').first().waitFor({ state: 'visible' })
+}
 
 test.describe('Story 1.5: Keyboard Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
+    // 等待初始渲染完成
+    await waitForActiveCardStable(page)
   })
 
-  test('should have first item selected by default', async ({ page }) => {
-    // 验证第一个卡片有活跃状态（scale-105 是活跃项的特征类名）
+  test('[P0] should have first item selected by default', async ({ page }) => {
+    // GIVEN: 页面已加载
+    // WHEN: 检查活跃状态
     const activeCard = page.locator('[class*="scale-105"]').first()
+
+    // THEN: 第一个卡片应该有活跃状态
     await expect(activeCard).toBeVisible()
 
     // 验证只有一个活跃项
@@ -27,72 +42,67 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
     await expect(activeCards).toHaveCount(1)
   })
 
-  test('should navigate right with ArrowRight key', async ({ page }) => {
-    // 获取初始活跃卡片的位置
+  test('[P0] should navigate right with ArrowRight key', async ({ page }) => {
+    // GIVEN: 获取初始活跃卡片的位置
     const initialActiveCard = page.locator('[class*="scale-105"]').first()
     const initialBox = await initialActiveCard.boundingBox()
 
-    // 按右箭头
+    // WHEN: 按右箭头
     await page.keyboard.press('ArrowRight')
 
-    // 等待动画完成
-    await page.waitForTimeout(100)
-
-    // 获取新的活跃卡片位置
-    const newActiveCard = page.locator('[class*="scale-105"]').first()
-    const newBox = await newActiveCard.boundingBox()
-
-    // 验证活跃卡片已移动（x 坐标应该增加）
-    expect(newBox?.x).toBeGreaterThan(initialBox?.x || 0)
+    // THEN: 等待新的活跃卡片出现并验证位置变化
+    await expect(async () => {
+      const newActiveCard = page.locator('[class*="scale-105"]').first()
+      const newBox = await newActiveCard.boundingBox()
+      expect(newBox?.x).toBeGreaterThan(initialBox?.x || 0)
+    }).toPass({ timeout: 1000 })
   })
 
-  test('should navigate left with ArrowLeft key', async ({ page }) => {
-    // 先向右导航一次
+  test('[P0] should navigate left with ArrowLeft key', async ({ page }) => {
+    // GIVEN: 先向右导航一次
     await page.keyboard.press('ArrowRight')
-    await page.waitForTimeout(100)
+    await waitForActiveCardStable(page)
 
     const afterRightCard = page.locator('[class*="scale-105"]').first()
     const afterRightBox = await afterRightCard.boundingBox()
 
-    // 再向左导航
+    // WHEN: 再向左导航
     await page.keyboard.press('ArrowLeft')
-    await page.waitForTimeout(100)
 
-    const afterLeftCard = page.locator('[class*="scale-105"]').first()
-    const afterLeftBox = await afterLeftCard.boundingBox()
-
-    // 验证活跃卡片已向左移动
-    expect(afterLeftBox?.x).toBeLessThan(afterRightBox?.x || 0)
+    // THEN: 验证活跃卡片已向左移动
+    await expect(async () => {
+      const afterLeftCard = page.locator('[class*="scale-105"]').first()
+      const afterLeftBox = await afterLeftCard.boundingBox()
+      expect(afterLeftBox?.x).toBeLessThan(afterRightBox?.x || 0)
+    }).toPass({ timeout: 1000 })
   })
 
-  test('should not navigate beyond first item boundary', async ({ page }) => {
-    // 获取第一个卡片位置
+  test('[P1] should not navigate beyond first item boundary', async ({ page }) => {
+    // GIVEN: 获取第一个卡片位置
     const firstCard = page.locator('[class*="scale-105"]').first()
     const firstBox = await firstCard.boundingBox()
 
-    // 尝试向左导航（应该保持在第一项）
+    // WHEN: 尝试向左导航多次（应该保持在第一项）
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
     await page.keyboard.press('ArrowLeft')
-    await page.waitForTimeout(100)
 
-    // 验证仍然选中第一项
-    const currentCard = page.locator('[class*="scale-105"]').first()
-    const currentBox = await currentCard.boundingBox()
-
-    expect(currentBox?.x).toBe(firstBox?.x)
+    // THEN: 验证仍然选中第一项
+    await expect(async () => {
+      const currentCard = page.locator('[class*="scale-105"]').first()
+      const currentBox = await currentCard.boundingBox()
+      expect(currentBox?.x).toBe(firstBox?.x)
+    }).toPass({ timeout: 1000 })
   })
 
-  test('should not navigate beyond last item boundary', async ({ page }) => {
-    // 初始数据有 8 项，导航到最后一项需要 7 次
-    // 使用较少的次数避免 WebKit 超时
-    for (let i = 0; i < 8; i++) {
+  test('[P1] should not navigate beyond last item boundary', async ({ page }) => {
+    // GIVEN: 初始数据有 8 项
+    // WHEN: 导航超过最后一项
+    for (let i = 0; i < 10; i++) {
       await page.keyboard.press('ArrowRight')
-      await page.waitForTimeout(50) // 给 WebKit 足够时间处理
     }
-    await page.waitForTimeout(100)
 
-    // 验证仍然只有一个活跃项（没有出错）
+    // THEN: 验证仍然只有一个活跃项（没有出错）
     const activeCards = page.locator('[class*="scale-105"]')
     await expect(activeCards).toHaveCount(1)
 
@@ -101,23 +111,28 @@ test.describe('Story 1.5: Keyboard Navigation', () => {
     await expect(activeCard).toBeVisible()
   })
 
-  test('should show toast when Enter is pressed on selected item', async ({ page }) => {
-    // 按 Enter 键复制选中项
+  test('[P0] should show toast when Enter is pressed on selected item', async ({ page }) => {
+    // GIVEN: 页面已加载，第一项已选中
+    // WHEN: 按 Enter 键复制选中项
     await page.keyboard.press('Enter')
 
-    // 验证 Toast 显示（WebKit 可能需要更长时间）
+    // THEN: 验证 Toast 显示
     const toast = page.locator('text=已复制到剪贴板')
     await expect(toast).toBeVisible({ timeout: 3000 })
   })
 
-  test('should display "Enter 复制" hint on active card', async ({ page }) => {
-    // 验证活跃卡片显示 "Enter 复制" 提示
+  test('[P1] should display "Enter 复制" hint on active card', async ({ page }) => {
+    // GIVEN: 页面已加载
+    // WHEN: 检查活跃卡片
+    // THEN: 验证活跃卡片显示 "Enter 复制" 提示
     const enterHint = page.locator('text=Enter 复制')
     await expect(enterHint).toBeVisible()
   })
 
-  test('should highlight active card with blue border', async ({ page }) => {
-    // 验证活跃卡片有蓝色边框样式
+  test('[P2] should highlight active card with blue border', async ({ page }) => {
+    // GIVEN: 页面已加载
+    // WHEN: 检查活跃卡片样式
+    // THEN: 验证活跃卡片有蓝色边框样式
     const activeCard = page.locator('[class*="border-blue-500"]').first()
     await expect(activeCard).toBeVisible()
   })
@@ -127,41 +142,69 @@ test.describe('Story 1.5: Keyboard Navigation with Search/Filter', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
+    await waitForActiveCardStable(page)
   })
 
-  test('should reset selection to first item after search', async ({ page }) => {
-    // 先导航到第三项
+  test('[P0] should reset selection to first item after search', async ({ page }) => {
+    // GIVEN: 先导航到第三项
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowRight')
-    await page.waitForTimeout(100)
+    await waitForActiveCardStable(page)
 
-    // 输入搜索
+    // WHEN: 输入搜索
     const searchInput = page.getByPlaceholder('搜索历史记录...')
     await searchInput.fill('git')
 
-    // 等待过滤
-    await page.waitForTimeout(200)
-
-    // 验证选中项重置到第一项
-    const activeCards = page.locator('[class*="scale-105"]')
-    await expect(activeCards).toHaveCount(1)
+    // THEN: 验证选中项重置到第一项（等待过滤结果更新）
+    await expect(page.locator('[class*="scale-105"]')).toHaveCount(1)
   })
 
-  test('should reset selection to first item after filter change', async ({ page }) => {
-    // 先导航到第三项
+  test('[P0] should reset selection to first item after filter change', async ({ page }) => {
+    // GIVEN: 先导航到第三项
     await page.keyboard.press('ArrowRight')
     await page.keyboard.press('ArrowRight')
-    await page.waitForTimeout(100)
+    await waitForActiveCardStable(page)
 
-    // 点击过滤按钮（图片）
+    // WHEN: 点击过滤按钮（图片）
     const imageFilter = page.getByRole('button', { name: '图片' })
     await imageFilter.click()
 
-    // 等待过滤
-    await page.waitForTimeout(200)
+    // THEN: 验证选中项重置到第一项
+    await expect(page.locator('[class*="scale-105"]')).toHaveCount(1)
+  })
 
-    // 验证选中项重置到第一项
+  test('[P1] should auto-focus search input on window focus', async ({ page }) => {
+    // GIVEN: 页面已加载
+    const searchInput = page.getByPlaceholder('搜索历史记录...')
+
+    // WHEN: 模拟窗口获得焦点（触发 window focus 事件）
+    // 注意：App.tsx 中的 handleWindowFocus 使用 setTimeout 50ms 延迟
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+
+    // THEN: 搜索框应该获得焦点（等待 setTimeout 完成）
+    await expect(searchInput).toBeFocused({ timeout: 1000 })
+  })
+
+  test('[P1] should handle keyboard navigation in empty results gracefully', async ({ page }) => {
+    // GIVEN: 搜索一个不存在的关键词，产生空结果
+    const searchInput = page.getByPlaceholder('搜索历史记录...')
+    await searchInput.fill('这是一个不存在的搜索词xyz123')
+
+    // 等待空状态出现
+    await expect(page.locator('text=没有匹配结果')).toBeVisible()
+
+    // WHEN: 尝试键盘导航（不应该报错）
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('Enter')
+
+    // THEN: 页面应该保持稳定，没有活跃卡片（因为没有结果）
     const activeCards = page.locator('[class*="scale-105"]')
-    await expect(activeCards).toHaveCount(1)
+    await expect(activeCards).toHaveCount(0)
+
+    // 空状态仍然显示
+    await expect(page.locator('text=没有匹配结果')).toBeVisible()
   })
 })
