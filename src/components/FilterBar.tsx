@@ -21,7 +21,7 @@ function FilterBar({ resultCount }: FilterBarProps) {
   ];
 
   return (
-    <div className="flex items-center justify-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-lg">
+    <div data-testid="filter-bar" className="flex items-center justify-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 shadow-lg">
       {filters.map((filter) => {
         const Icon = filter.icon;
         const isSelected = currentFilter === filter.key;
@@ -29,6 +29,8 @@ function FilterBar({ resultCount }: FilterBarProps) {
         return (
           <button
             key={filter.key}
+            data-testid={`filter-${filter.key}`}
+            aria-pressed={isSelected}
             onClick={() => onSelect(filter.key)}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",

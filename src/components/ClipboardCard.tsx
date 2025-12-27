@@ -44,6 +44,8 @@ function ClipboardCard({ item, isActive, onClick, onStarToggle }: ClipboardCardP
   return (
     <div
       onClick={onClick}
+      data-testid="clipboard-card"
+      data-active={isActive}
       className={cn(
         "relative flex-shrink-0 w-[220px] h-[240px] rounded-xl transition-all duration-200 ease-out cursor-pointer group select-none snap-center",
         "flex flex-col overflow-hidden border",
@@ -64,6 +66,8 @@ function ClipboardCard({ item, isActive, onClick, onStarToggle }: ClipboardCardP
         {/* Star Button */}
         <button
           onClick={onStarToggle}
+          data-testid="star-button"
+          aria-pressed={item.isStarred}
           className={cn(
             "p-1.5 rounded-full transition-colors hover:bg-white/10",
             item.isStarred ? "text-yellow-400" : "text-gray-600 hover:text-gray-300"
